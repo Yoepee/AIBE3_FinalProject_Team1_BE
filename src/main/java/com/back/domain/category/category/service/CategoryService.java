@@ -70,7 +70,7 @@ public class CategoryService {
         try {
             categoryRepository.deleteById(categoryId);
             categoryRepository.flush();
-        } catch (DataIntegrityViolationException e) { // DB FK 제약 조건 위반 시 발생에러, 데이터 베이스에 FK 설정 필요
+        } catch (DataIntegrityViolationException e) { // DB FK 제약 조건 위반 시 발생에러, 데이터 베이스에 FK 설정 필요 (Post 테이블)
             throw new ServiceException("400-1", "%d번 카테고리를 참조 중인 게시글이 있습니다.".formatted(categoryId));
         }
     }
