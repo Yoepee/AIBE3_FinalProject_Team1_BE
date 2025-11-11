@@ -1,0 +1,39 @@
+package com.back.domain.report.report.service;
+
+import com.back.domain.member.member.entity.Member;
+import com.back.domain.member.member.repository.MemberRepository;
+import com.back.domain.report.report.dto.ReportReqBody;
+import com.back.domain.report.report.dto.ReportResBody;
+import com.back.domain.report.report.entity.Report;
+import com.back.domain.report.report.common.validator.ReportValidator;
+import com.back.domain.report.report.repository.ReportRepository;
+import com.back.global.exception.ServiceException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class ReportService {
+
+    private final ReportValidator reportValidator;
+    private final ReportRepository reportRepository;
+    private final MemberRepository memberRepository;
+
+    @Transactional
+    public ReportResBody postReport(ReportReqBody reportReqBody, long reporterId) {
+        reportValidator.validateTargetId(reportReqBody.reportType(), reportReqBody.targetId());
+
+        Member reporter = memberRepository.findById(reporterId)
+                                          .orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        Report savedReport = reportRepository.save(Report.builder()
+                                                         .comment(reportReqBody.comment())
+                                                         .targetId(reportReqBody.targetId())
+                                                         .reportType(reportReqBody.reportType())
+                                                         .member(reporter)
+                                                         .build());
+        return ReportResBody.from(savedReport);
+    }
+}
