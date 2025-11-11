@@ -9,6 +9,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -46,4 +48,12 @@ public class Reservation extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id")
     private Member author;
+
+    @Builder.Default
+    @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ReservationOption> reservationOptions = new ArrayList<>();
+
+    public void addAllOptions(List<ReservationOption> reservationOptions) {
+        this.reservationOptions.addAll(reservationOptions);
+    }
 }
