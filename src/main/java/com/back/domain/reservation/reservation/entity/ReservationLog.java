@@ -8,7 +8,7 @@ import lombok.*;
 @Entity
 @Getter
 @ToString
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class ReservationLog extends BaseEntity {
