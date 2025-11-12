@@ -1,5 +1,7 @@
 package com.back.domain.post.post.service;
 
+import com.back.domain.category.category.entity.Category;
+import com.back.domain.category.category.repository.CategoryRepository;
 import com.back.domain.member.member.dto.AuthorDto;
 import com.back.domain.member.member.entity.Member;
 import com.back.domain.member.member.repository.MemberRepository;
@@ -11,8 +13,11 @@ import com.back.domain.post.post.dto.res.PostOptionResBody;
 import com.back.domain.post.post.entity.Post;
 import com.back.domain.post.post.entity.PostImage;
 import com.back.domain.post.post.entity.PostOption;
+import com.back.domain.post.post.entity.PostRegion;
 import com.back.domain.post.post.repository.PostOptionRepository;
 import com.back.domain.post.post.repository.PostRepository;
+import com.back.domain.region.region.entity.Region;
+import com.back.domain.region.region.repository.RegionRepository;
 import com.back.global.exception.ServiceException;
 import com.back.standard.util.page.PagePayload;
 import com.back.standard.util.page.PageUt;
@@ -32,13 +37,20 @@ public class PostService {
     private final MemberRepository memberRepository;
     private final PostOptionRepository postOptionRepository;
 
-    // TODO: 추후 구현 필요
-    // private final RegionRepository regionRepository;
-    // private final CategoryRepository categoryRepository;
+    private final RegionRepository regionRepository;
+    private final CategoryRepository categoryRepository;
 
     public Long createPost(PostCreateReqBody reqBody, Long memberId) {
 
         Member author = memberRepository.findById(memberId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        Category category = categoryRepository.findById(memberId)
+                .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 카테고리입니다."));
+
+        List<Region> regions = regionRepository.findAllById(reqBody.regionIds());
+        if (regions.isEmpty()) {
+            throw new ServiceException("404-3", "존재하지 않는 지역입니다.");
+        }
 
         Post post = Post.builder()
                 .title(reqBody.title())
@@ -50,6 +62,7 @@ public class PostService {
                 .deposit(reqBody.deposit())
                 .fee(reqBody.fee())
                 .author(author)
+                .category(category)
                 .isBanned(false)
                 .build();
 
@@ -75,6 +88,15 @@ public class PostService {
                     .toList();
             post.getImages().addAll(postImages);
         }
+
+        List<PostRegion> postRegions = regions.stream()
+                .map(region -> PostRegion.builder()
+                        .post(post)
+                        .region(region)
+                        .build())
+                .toList();
+        post.getPostRegions().addAll(postRegions);
+
         Post savedPost = postRepository.save(post);
         return savedPost.getId();
     }
@@ -93,8 +115,10 @@ public class PostService {
                                         .map(img -> img.getImageUrl())
                                         .orElse(null)
                         )
-                        .categoryId(null) // TODO: 추후 카테고리 연동
-                        .regionIds(List.of()) // TODO: 추후 지역 연동
+                        .categoryId(post.getCategory().getId())
+                        .regionIds(post.getPostRegions().stream()
+                                .map(postRegion -> postRegion.getRegion().getId())
+                                .collect(Collectors.toList()))
                         .receiveMethod(post.getReceiveMethod())
                         .returnMethod(post.getReturnMethod())
                         .createdAt(post.getCreatedAt())
@@ -119,8 +143,10 @@ public class PostService {
                 .postId(post.getId())
                 .title(post.getTitle())
                 .content(post.getContent())
-                .categoryId(null) // TODO: 추후 카테고리 연동
-                .regionIds(List.of()) // TODO: 추후 지역 연동
+                .categoryId(post.getCategory().getId())
+                .regionIds(post.getPostRegions().stream()
+                        .map(postRegion -> postRegion.getId())
+                        .collect(Collectors.toList()))
                 .receiveMethod(post.getReceiveMethod())
                 .returnMethod(post.getReturnMethod())
                 .returnAddress1(post.getReturnAddress1())
@@ -163,8 +189,10 @@ public class PostService {
                                         .map(img -> img.getImageUrl())
                                         .orElse(null)
                         )
-                        .categoryId(null) // TODO: 추후 카테고리 연동
-                        .regionIds(List.of()) // TODO: 추후 지역 연동
+                        .categoryId(post.getCategory().getId()) // TODO: 추후 카테고리 연동
+                        .regionIds(post.getPostRegions().stream()
+                                .map(postRegion -> postRegion.getId())
+                                .collect(Collectors.toList()))
                         .receiveMethod(post.getReceiveMethod())
                         .returnMethod(post.getReturnMethod())
                         .createdAt(post.getCreatedAt())
