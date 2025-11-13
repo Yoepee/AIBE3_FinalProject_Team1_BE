@@ -94,12 +94,12 @@ public class ReservationController implements ReservationApi {
     }
 
     @Transactional
-    @PutMapping("/{reservationId}")
+    @PutMapping("/{id}")
     public ResponseEntity<RsData<ReservationDto>> updateReservation(
-            @PathVariable Long reservationId,
+            @PathVariable Long id,
             @AuthenticationPrincipal SecurityUser securityUser,
             @Valid @RequestBody UpdateReservationReqBody reqBody ) {
-        ReservationDto reservationDto = reservationService.updateReservation(reservationId, securityUser.getId(), reqBody);
-        return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "%d번 예약이 수정되었습니다.".formatted(reservationId), reservationDto));
+        ReservationDto reservationDto = reservationService.updateReservation(id, securityUser.getId(), reqBody);
+        return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "%d번 예약이 수정되었습니다.".formatted(id), reservationDto));
     }
 }
