@@ -5,15 +5,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class PostImage extends BaseEntity {
 
@@ -24,4 +23,14 @@ public class PostImage extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
+
+    public PostImage(Post post, String imageUrl, Boolean isPrimary) {
+        this.imageUrl = imageUrl;
+        this.isPrimary = isPrimary;
+        this.setPost(post);
+    }
+
+    void setPost(Post post) {
+        this.post = post;
+    }
 }

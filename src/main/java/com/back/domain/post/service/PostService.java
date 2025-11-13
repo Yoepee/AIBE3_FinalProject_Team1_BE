@@ -48,49 +48,51 @@ public class PostService {
             throw new ServiceException(HttpStatus.NOT_FOUND, "존재하지 않는 지역입니다.");
         }
 
-        Post post = Post.builder()
-                .title(reqBody.title())
-                .content(reqBody.content())
-                .receiveMethod(reqBody.receiveMethod())
-                .returnMethod(reqBody.returnMethod())
-                .returnAddress1(reqBody.returnAddress1())
-                .returnAddress2(reqBody.returnAddress2())
-                .deposit(reqBody.deposit())
-                .fee(reqBody.fee())
-                .author(author)
-                .category(category)
-                .isBanned(false)
-                .build();
+        Post post = Post.of(
+                reqBody.title(),
+                reqBody.content(),
+                reqBody.receiveMethod(),
+                reqBody.returnMethod(),
+                reqBody.returnAddress1(),
+                reqBody.returnAddress2(),
+                reqBody.deposit(),
+                reqBody.fee(),
+                author,
+                category
+        );
 
         if (reqBody.options() != null && !reqBody.options().isEmpty()) {
             List<PostOption> postOptions = reqBody.options().stream()
-                    .map(option -> PostOption.builder()
-                            .post(post)
-                            .name(option.name())
-                            .deposit(option.deposit())
-                            .fee(option.fee())
-                            .build())
+                    .map(option -> new PostOption(
+                            post,
+                            option.name(),
+                            option.deposit(),
+                            option.fee()
+                    ))
                     .toList();
+
             post.getOptions().addAll(postOptions);
         }
 
         if (reqBody.images() != null && !reqBody.images().isEmpty()) {
-            List<PostImage> postImages = reqBody.images().stream()
-                    .map(image -> PostImage.builder()
-                            .post(post)
-                            .imageUrl("example.com/image.jpg") // TODO: 이미지 업로드 로직 구현 후 수정
-                            .isPrimary(image.isPrimary())
-                            .build())
+            List<PostImage> images = reqBody.images().stream()
+                    .map(img -> new PostImage(
+                            post,
+                            "example.com/image.jpg", // TODO: 실제 업로드 로직으로 변경
+                            img.isPrimary()
+                    ))
                     .toList();
-            post.getImages().addAll(postImages);
+
+            post.resetPostImages(images);
         }
 
         List<PostRegion> postRegions = regions.stream()
-                .map(region -> PostRegion.builder()
-                        .post(post)
-                        .region(region)
-                        .build())
+                .map(region -> new PostRegion(
+                        post,
+                        region
+                ))
                 .toList();
+
         post.getPostRegions().addAll(postRegions);
 
         postRepository.save(post);
@@ -301,10 +303,51 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "존재하지 않는 게시글입니다."));
 
-
         if (post.getAuthor().getId().equals(memberId)) {
             throw new ServiceException(HttpStatus.FORBIDDEN, "본인의 게시글만 수정할 수 있습니다.");
         }
+
+        Category category = categoryRepository.findById(reqBody.categoryId())
+                .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "존재하지 않는 카테고리입니다."));
+
+        post.updatePost(
+                reqBody.title(),
+                reqBody.content(),
+                reqBody.receiveMethod(),
+                reqBody.returnMethod(),
+                reqBody.returnAddress1(),
+                reqBody.returnAddress2(),
+                reqBody.deposit(),
+                reqBody.fee()
+        );
+        post.updateCategory(category);
+
+        List<PostOption> newOptions = reqBody.options().stream()
+                .map(option -> new PostOption(
+                        post,
+                        option.name(),
+                        option.deposit(),
+                        option.fee()
+                ))
+                .toList();
+        post.resetPostOptions(newOptions);
+
+        List<PostImage> newImages = reqBody.images().stream()
+                .map(img -> new PostImage(
+                        post,
+                        "example.com/image.jpg", // TODO: 실제 업로드 로직으로 변경
+                        img.isPrimary()
+                ))
+                .toList();
+        post.resetPostImages(newImages);
+
+        List<PostRegion> newPostRegions = regionRepository.findAllById(reqBody.regionIds()).stream()
+                .map(region -> new PostRegion(
+                        post,
+                        region
+                ))
+                .toList();
+        post.resetPostRegions(newPostRegions);
     }
 
 }

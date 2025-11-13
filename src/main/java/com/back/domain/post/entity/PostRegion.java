@@ -6,16 +6,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PostRegion extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -25,4 +22,13 @@ public class PostRegion extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
+
+    public PostRegion(Post post, Region region) {
+        this.region = region;
+        this.setPost(post);
+    }
+
+    void setPost(Post post) {
+        this.post = post;
+    }
 }

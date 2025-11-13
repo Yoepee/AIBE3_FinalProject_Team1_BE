@@ -5,15 +5,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class PostOption extends BaseEntity {
 
@@ -26,4 +25,16 @@ public class PostOption extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
+
+    public PostOption(Post post, String name, Integer deposit, Integer fee) {
+        this.name = name;
+        this.deposit = deposit;
+        this.fee = fee;
+        this.setPost(post);
+    }
+
+    void setPost(Post post) {
+        this.post = post;
+    }
+
 }
