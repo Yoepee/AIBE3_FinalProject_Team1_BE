@@ -73,10 +73,24 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
     }
 
     @Override
-    public Optional<Reservation> findByIdWithOptions(Long id) {
+    public Optional<Reservation> findByIdWithAll(Long id) {
         Reservation result = selectFrom(reservation)
+                .leftJoin(reservation.post, post).fetchJoin()
+                .leftJoin(reservation.author, member).fetchJoin()
                 .leftJoin(reservation.reservationOptions, reservationOption).fetchJoin()
                 .leftJoin(reservationOption.postOption, postOption).fetchJoin()
+                .where(reservation.id.eq(id))
+                .fetchOne();
+
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public Optional<Reservation> findByIdWithPostAndAuthor(Long id) {
+        Reservation result = selectFrom(reservation)
+                .leftJoin(reservation.post, post).fetchJoin()
+                .leftJoin(reservation.author, member).fetchJoin()
+                .leftJoin(post.author, member).fetchJoin()  // 호스트 정보도
                 .where(reservation.id.eq(id))
                 .fetchOne();
 
@@ -147,17 +161,7 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
         return new PageImpl<>(content, pageable, total);
     }
 
-    @Override
-    public Optional<Reservation> findByIdWithPostAndAuthor(Long id) {
-        Reservation result = selectFrom(reservation)
-                .leftJoin(reservation.post, post).fetchJoin()
-                .leftJoin(reservation.author, member).fetchJoin()
-                .leftJoin(post.author, member).fetchJoin()  // 호스트 정보도
-                .where(reservation.id.eq(id))
-                .fetchOne();
 
-        return Optional.ofNullable(result);
-    }
 
     // ===== 동적 조건 메서드 (Report 예시 스타일) =====
 

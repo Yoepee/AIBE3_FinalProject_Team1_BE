@@ -295,7 +295,7 @@ public class ReservationService {
     }
 
     public ReservationDto getReservationDtoById(Long reservationId, Long memberId) {
-        Reservation reservation = reservationQueryRepository.findByIdWithOptions(reservationId)  // ✅ 수정
+        Reservation reservation = reservationQueryRepository.findByIdWithAll(reservationId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "해당 예약을 찾을 수 없습니다."));
 
         // 권한 체크
@@ -451,13 +451,13 @@ public class ReservationService {
         }
     }
 
-    public Reservation getById(Long reservationId) {
-        return reservationRepository.findById(reservationId)
+    public Reservation getByIdWithPostAndAuthor(Long reservationId) {
+        return reservationQueryRepository.findByIdWithPostAndAuthor(reservationId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "해당 예약을 찾을 수 없습니다."));
     }
 
     public void updateReservation(Long reservationId, Long memberId, UpdateReservationReqBody reqBody) {
-        Reservation reservation = reservationQueryRepository.findByIdWithOptions(reservationId)
+        Reservation reservation = reservationQueryRepository.findByIdWithAll(reservationId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "해당 예약을 찾을 수 없습니다."));
 
         // 권한 체크: 예약 작성한 게스트만 수정 가능

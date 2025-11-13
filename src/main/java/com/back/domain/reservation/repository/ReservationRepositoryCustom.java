@@ -20,7 +20,7 @@ public interface ReservationRepositoryCustom {
 
     boolean existsActiveReservation(Long postId, Long authorId);
 
-    Optional<Reservation> findByIdWithOptions(Long id);
+    Optional<Reservation> findByIdWithAll(Long id);
     Optional<Reservation> findByIdWithPostAndAuthor(Long id);
 
     Page<Reservation> findByAuthorWithFetch(Member author,
