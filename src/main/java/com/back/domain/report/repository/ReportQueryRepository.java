@@ -10,8 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import static com.back.domain.member.member.entity.QMember.member;
-import static com.back.domain.report.report.entity.QReport.report;
+import static com.back.domain.member.entity.QMember.member;
+import static com.back.domain.report.entity.QReport.report;
 
 @Repository
 public class ReportQueryRepository extends CustomQuerydslRepositorySupport {

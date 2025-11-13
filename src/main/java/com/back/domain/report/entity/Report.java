@@ -1,6 +1,6 @@
 package com.back.domain.report.entity;
 
-import com.back.domain.member.member.entity.Member;
+import com.back.domain.member.entity.Member;
 import com.back.domain.report.common.ReportType;
 import com.back.global.jpa.entity.BaseEntity;
 import jakarta.persistence.Column;
