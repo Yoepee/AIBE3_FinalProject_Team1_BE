@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @Tag(name = "Chat API", description = "채팅 기능 관련 API, 인증 필요")
 public interface ChatApi {
@@ -25,6 +26,12 @@ public interface ChatApi {
     ResponseEntity<RsData<PagePayload<ChatRoomDto>>> getMyChatRooms(
             Pageable pageable,
             String keyword,
+            @AuthenticationPrincipal SecurityUser securityUser
+    );
+
+    @Operation(summary = "채팅방 상세 조회 API", description = "특정 채팅방의 상세 정보를 조회합니다.")
+    public ResponseEntity<RsData<ChatRoomDto>> getChatRoom(
+            @PathVariable Long id,
             @AuthenticationPrincipal SecurityUser securityUser
     );
 }
