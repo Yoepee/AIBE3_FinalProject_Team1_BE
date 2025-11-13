@@ -10,10 +10,8 @@ import com.back.domain.post.post.dto.res.PostDetailResBody;
 import com.back.domain.post.post.dto.res.PostImageResBody;
 import com.back.domain.post.post.dto.res.PostListResBody;
 import com.back.domain.post.post.dto.res.PostOptionResBody;
-import com.back.domain.post.post.entity.Post;
-import com.back.domain.post.post.entity.PostImage;
-import com.back.domain.post.post.entity.PostOption;
-import com.back.domain.post.post.entity.PostRegion;
+import com.back.domain.post.post.entity.*;
+import com.back.domain.post.post.repository.PostFavoriteRepository;
 import com.back.domain.post.post.repository.PostOptionRepository;
 import com.back.domain.post.post.repository.PostRepository;
 import com.back.domain.region.region.entity.Region;
@@ -36,6 +34,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final MemberRepository memberRepository;
     private final PostOptionRepository postOptionRepository;
+    private final PostFavoriteRepository postFavoriteRepository;
 
     private final RegionRepository regionRepository;
     private final CategoryRepository categoryRepository;
@@ -44,7 +43,7 @@ public class PostService {
 
         Member author = memberRepository.findById(memberId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
 
-        Category category = categoryRepository.findById(memberId)
+        Category category = categoryRepository.findById(reqBody.categoryId())
                 .orElseThrow(() -> new ServiceException("404-2", "존재하지 않는 카테고리입니다."));
 
         List<Region> regions = regionRepository.findAllById(reqBody.regionIds());
@@ -105,7 +104,8 @@ public class PostService {
             Pageable pageable,
             String keyword,
             Long categoryId,
-            List<Long> regionIds
+            List<Long> regionIds,
+            Long memberId
     ) {
         boolean hasFilter =
                 (keyword != null && !keyword.isBlank()) ||
@@ -124,43 +124,53 @@ public class PostService {
             postPage = postRepository.findAll(pageable);
         }
 
-        Page<PostListResBody> mappedPage = postPage.map(post ->
-                PostListResBody.builder()
-                        .postId(post.getId())
-                        .title(post.getTitle())
-                        .thumbnailImageUrl(
-                                post.getImages().stream()
-                                        .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                                        .findFirst()
-                                        .map(PostImage::getImageUrl)
-                                        .orElse(null)
-                        )
-                        .categoryId(post.getCategory().getId())
-                        .regionIds(
-                                post.getPostRegions().stream()
-                                        .map(postRegion -> postRegion.getRegion().getId())
-                                        .collect(Collectors.toList())
-                        )
-                        .receiveMethod(post.getReceiveMethod())
-                        .returnMethod(post.getReturnMethod())
-                        .createdAt(post.getCreatedAt())
-                        .authorNickname(post.getAuthor().getNickname())
-                        .fee(post.getFee())
-                        .deposit(post.getDeposit())
-                        .isFavorite(false) // TODO: 추후 즐겨찾기 로직 추가
-                        .isBanned(post.getIsBanned())
-                        .build()
-        );
+        Page<PostListResBody> mappedPage = postPage.map(post -> {
+            boolean isFavorite = false;
+
+            if (memberId != null && !post.getAuthor().getId().equals(memberId)) {
+                isFavorite = postFavoriteRepository
+                        .findByMemberIdAndPostId(memberId, post.getId())
+                        .isPresent();
+            }
+
+            return PostListResBody.builder()
+                    .postId(post.getId())
+                    .title(post.getTitle())
+                    .thumbnailImageUrl(
+                            post.getImages().stream()
+                                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                                    .findFirst()
+                                    .map(PostImage::getImageUrl)
+                                    .orElse(null)
+                    )
+                    .categoryId(post.getCategory().getId())
+                    .regionIds(
+                            post.getPostRegions().stream()
+                                    .map(postRegion -> postRegion.getRegion().getId())
+                                    .collect(Collectors.toList())
+                    )
+                    .receiveMethod(post.getReceiveMethod())
+                    .returnMethod(post.getReturnMethod())
+                    .createdAt(post.getCreatedAt())
+                    .authorNickname(post.getAuthor().getNickname())
+                    .fee(post.getFee())
+                    .deposit(post.getDeposit())
+                    .isFavorite(isFavorite)
+                    .isBanned(post.getIsBanned())
+                    .build();
+        });
 
         return PageUt.of(mappedPage);
     }
 
 
-    public PostDetailResBody getPostById(Long postId) {
+    public PostDetailResBody getPostById(Long postId, Long memberId) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() ->
                         new ServiceException("404-1", "%d번 글은 존재하지 않는 게시글입니다.".formatted(postId))
                 );
+
+        boolean isFavorite = postFavoriteRepository.findByMemberIdAndPostId(memberId, postId).isPresent();
 
         return PostDetailResBody.builder()
                 .postId(post.getId())
@@ -168,7 +178,7 @@ public class PostService {
                 .content(post.getContent())
                 .categoryId(post.getCategory().getId())
                 .regionIds(post.getPostRegions().stream()
-                        .map(postRegion -> postRegion.getId())
+                        .map(postRegion -> postRegion.getRegion().getId())
                         .collect(Collectors.toList()))
                 .receiveMethod(post.getReceiveMethod())
                 .returnMethod(post.getReturnMethod())
@@ -194,12 +204,10 @@ public class PostService {
                 .createdAt(post.getCreatedAt())
                 .modifiedAt(post.getModifiedAt())
                 .author(AuthorDto.from(post.getAuthor()))
-                .isFavorite(false) // TODO: 추후 즐겨찾기 로직 추가
+                .isFavorite(isFavorite)
                 .isBanned(post.getIsBanned())
                 .build();
-
     }
-
     public PagePayload<PostListResBody> getMyPosts(Long memberId, Pageable pageable) {
         Page<PostListResBody> postPage = postRepository.findAllByAuthorId(memberId, pageable)
                 .map(post -> PostListResBody.builder()
@@ -212,9 +220,9 @@ public class PostService {
                                         .map(img -> img.getImageUrl())
                                         .orElse(null)
                         )
-                        .categoryId(post.getCategory().getId()) // TODO: 추후 카테고리 연동
+                        .categoryId(post.getCategory().getId())
                         .regionIds(post.getPostRegions().stream()
-                                .map(postRegion -> postRegion.getId())
+                                .map(postRegion -> postRegion.getRegion().getId())
                                 .collect(Collectors.toList()))
                         .receiveMethod(post.getReceiveMethod())
                         .returnMethod(post.getReturnMethod())
@@ -222,7 +230,7 @@ public class PostService {
                         .authorNickname(post.getAuthor().getNickname())
                         .fee(post.getFee())
                         .deposit(post.getDeposit())
-                        .isFavorite(false) // TODO: 추후 즐겨찾기 로직 추가
+                        .isFavorite(false)
                         .isBanned(post.getIsBanned())
                         .build()
                 );
@@ -236,5 +244,60 @@ public class PostService {
 
     public List<PostOption> getAllOptionsById(List<Long> optionIds) {
         return postOptionRepository.findAllById(optionIds);
+    }
+
+    public boolean toggleFavorite(Long postId, long memberId) {
+        Post post = getById(postId);
+        Member member = memberRepository.findById(memberId).orElseThrow(() -> new ServiceException("404-1", "존재하지 않는 회원입니다."));
+
+        if (post.getAuthor().getId().equals(member.getId())) {
+            throw new ServiceException("404-3", "본인의 게시글은 즐겨찾기 할 수 없습니다.");
+        }
+
+        return postFavoriteRepository.findByMemberIdAndPostId(memberId, postId)
+                .map(postFavorite -> {
+                    postFavoriteRepository.delete(postFavorite);
+                    return false;
+                })
+                .orElseGet(() -> {
+                    PostFavorite postFavorite = PostFavorite.builder()
+                            .member(member)
+                            .post(post)
+                            .build();
+                    postFavoriteRepository.save(postFavorite);
+                    return true;
+                });
+    }
+
+    public PagePayload<PostListResBody> getFavoritePosts(long memberId, Pageable pageable) {
+        Page<PostFavorite> favoritePosts = postFavoriteRepository.findAllByMemberId(memberId, pageable);
+
+        Page<PostListResBody> mappedPage = favoritePosts.map(favorite -> {
+            Post post = favorite.getPost();
+            return PostListResBody.builder()
+                    .postId(post.getId())
+                    .title(post.getTitle())
+                    .thumbnailImageUrl(
+                            post.getImages().stream()
+                                    .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                                    .findFirst()
+                                    .map(img -> img.getImageUrl())
+                                    .orElse(null)
+                    )
+                    .categoryId(post.getCategory().getId())
+                    .regionIds(post.getPostRegions().stream()
+                            .map(postRegion -> postRegion.getRegion().getId())
+                            .collect(Collectors.toList()))
+                    .receiveMethod(post.getReceiveMethod())
+                    .returnMethod(post.getReturnMethod())
+                    .createdAt(post.getCreatedAt())
+                    .authorNickname(post.getAuthor().getNickname())
+                    .fee(post.getFee())
+                    .deposit(post.getDeposit())
+                    .isFavorite(true)
+                    .isBanned(post.getIsBanned())
+                    .build();
+        });
+        return PageUt.of(mappedPage);
     }
 }
