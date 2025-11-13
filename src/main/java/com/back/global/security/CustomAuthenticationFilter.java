@@ -57,7 +57,7 @@ public class CustomAuthenticationFilter extends OncePerRequestFilter {
 
             // 2) Refresh Token로 회복 (쿠키 전용)
             String refreshPlain = cookieHelper.getCookieValue("refreshToken", "");
-            if (!refreshPlain.isBlank()) {
+            if (refreshPlain != null && !refreshPlain.isBlank()) {
                 try {
                     // Redis에서 소유자(userId) 확인
                     long userId = authTokenService.findRefreshOwner(refreshPlain);
