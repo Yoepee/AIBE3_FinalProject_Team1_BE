@@ -76,14 +76,21 @@ class ChatControllerTest {
         memberRepository.deleteAll();
 
         // 회원 생성
-        member1 = new Member("user1@test.com", "1234", "홍길동", "010-1111-1111",
-                "서울시 강남구", "테헤란로 123", "hong");
-        member2 = new Member("user2@test.com", "1234", "김철수", "010-2222-2222",
-                "서울시 서초구", "서초대로 456", "kim");
-        member3 = new Member("user3@test.com", "1234", "이영희", "010-3333-3333",
-                "서울시 마포구", "월드컵북로 789", "lee");
-        member4 = new Member("user4@test.com", "1234", "박민수", "010-4444-4444",
-                "서울시 송파구", "잠실로 101", "park");
+        member1 = memberRepository.save(new Member(
+                "user1@test.com", "1234", "홍길동", "010-1111-1111",
+                "서울시 강남구", "테헤란로 123", "hong"));
+
+        member2 = memberRepository.save(new Member(
+                "user2@test.com", "1234", "김철수", "010-2222-2222",
+                "서울시 서초구", "서초대로 456", "kim"));
+
+        member3 = memberRepository.save(new Member(
+                "user3@test.com", "1234", "이영희", "010-3333-3333",
+                "서울시 마포구", "월드컵북로 789", "lee"));
+
+        member4 = memberRepository.save(new Member(
+                "user4@test.com", "1234", "박민수", "010-4444-4444",
+                "서울시 송파구", "잠실로 101", "park"));
 
         // 게시글 생성
         Category category = Category.create("노트북", null);
