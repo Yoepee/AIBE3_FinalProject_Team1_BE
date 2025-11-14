@@ -1,9 +1,6 @@
 package com.back.domain.chat.service;
 
-import com.back.domain.chat.dto.ChatPostDto;
-import com.back.domain.chat.dto.ChatRoomDto;
-import com.back.domain.chat.dto.CreateChatRoomResBody;
-import com.back.domain.chat.dto.OtherMemberDto;
+import com.back.domain.chat.dto.*;
 import com.back.domain.chat.entity.ChatMember;
 import com.back.domain.chat.entity.ChatRoom;
 import com.back.domain.chat.repository.ChatQueryRepository;
@@ -62,7 +59,7 @@ public class ChatService {
         return PageUt.of(chatRooms);
     }
 
-    public ChatRoomDto getChatRoom(Long chatRoomId, long memberId) {
+    public ChatRoomDto getChatRoom(Long chatRoomId, Long memberId) {
         ChatRoom chatRoom = chatQueryRepository.getChatRoom(chatRoomId)
                 .orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "존재하지 않는 채팅방입니다."));
 
@@ -79,7 +76,7 @@ public class ChatService {
         return new ChatRoomDto(chatRoom.getId(), chatRoom.getCreatedAt(), chatPostDto, otherMemberDto);
     }
 
-    private Member getMember(long memberId, ChatRoom chatRoom) {
+    private Member getMember(Long memberId, ChatRoom chatRoom) {
         Member currentMember = null;
         Member otherMember = null;
 
@@ -99,6 +96,19 @@ public class ChatService {
         if (otherMember == null) {
             throw new ServiceException(HttpStatus.NOT_FOUND, "채팅 상대 정보가 없습니다.");
         }
+
         return otherMember;
+    }
+
+    public PagePayload<ChatMessageDto> getChatMessageList(Long chatRoomId, Long memberId, Pageable pageable) {
+
+        boolean isMember = chatQueryRepository.isMemberInChatRoom(chatRoomId, memberId);
+        if (!isMember) {
+            throw new ServiceException(HttpStatus.FORBIDDEN, "채팅방이 존재하지 않거나 접근 권한이 없습니다.");
+        }
+
+        Page<ChatMessageDto> chatMessages = chatQueryRepository.getChatMessages(chatRoomId, memberId, pageable);
+
+        return PageUt.of(chatMessages);
     }
 }

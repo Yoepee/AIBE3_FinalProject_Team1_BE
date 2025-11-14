@@ -1,10 +1,12 @@
 package com.back.domain.chat.repository;
 
+import com.back.domain.chat.dto.ChatMessageDto;
 import com.back.domain.chat.dto.ChatPostDto;
 import com.back.domain.chat.dto.ChatRoomDto;
 import com.back.domain.chat.dto.OtherMemberDto;
 import com.back.domain.chat.entity.ChatRoom;
 import com.back.domain.chat.entity.QChatMember;
+import com.back.domain.chat.entity.QChatMessage;
 import com.back.domain.chat.entity.QChatRoom;
 import com.back.domain.member.entity.QMember;
 import com.back.domain.post.entity.QPost;
@@ -73,7 +75,7 @@ public class ChatQueryRepository extends CustomQuerydslRepositorySupport {
                 .join(chatRoom.chatMembers, other)
                 .join(other.member, member)
                 .where(condition.and(other.member.id.ne(memberId)))
-                .orderBy(chatRoom.createdAt.desc());
+                .orderBy(chatRoom.id.desc());
 
         //countQuery
         Function<JPAQueryFactory, JPAQuery<Long>> countQuery = query -> query
@@ -106,5 +108,50 @@ public class ChatQueryRepository extends CustomQuerydslRepositorySupport {
                 .fetchOne();
 
         return Optional.ofNullable(chatRoom);
+    }
+
+    public Page<ChatMessageDto> getChatMessages(Long chatRoomId, Long memberId, Pageable pageable) {
+        QChatMessage qChatMessage = QChatMessage.chatMessage;
+        QChatMember qChatMember = QChatMember.chatMember;
+        QMember qMember = QMember.member;
+
+        //contentQuery
+        Function<JPAQueryFactory, JPAQuery<ChatMessageDto>> contentQuery = query -> query
+                .select(Projections.constructor(ChatMessageDto.class,
+                        qChatMessage.id,
+                        qMember.id,
+                        qChatMessage.content,
+                        qChatMessage.createdAt
+                ))
+                .from(qChatMessage)
+                .join(qChatMember).on(qChatMessage.chatMemberId.eq(qChatMember.id))
+                .join(qMember).on(qChatMember.member.id.eq(qMember.id))
+                .where(
+                        qChatMessage.chatRoomId.eq(chatRoomId),
+                        qChatMember.chatRoom.id.eq(chatRoomId)
+                )
+                .orderBy(qChatMessage.id.desc());
+
+        //countQuery
+        Function<JPAQueryFactory, JPAQuery<Long>> countQuery = query -> query
+                .select(qChatMessage.count())
+                .from(qChatMessage)
+                .where(qChatMessage.chatRoomId.eq(chatRoomId));
+
+        return applyPagination(pageable, contentQuery, countQuery);
+    }
+
+    public boolean isMemberInChatRoom(Long chatRoomId, Long memberId) {
+        QChatMember qChatMember = QChatMember.chatMember;
+
+        Integer count = select(qChatMember.id.count().intValue())
+                .from(qChatMember)
+                .where(
+                        qChatMember.chatRoom.id.eq(chatRoomId),
+                        qChatMember.member.id.eq(memberId)
+                )
+                .fetchOne();
+
+        return count != null && count > 0;
     }
 }

@@ -1,5 +1,6 @@
 package com.back.domain.chat.controller;
 
+import com.back.domain.chat.dto.ChatMessageDto;
 import com.back.domain.chat.dto.ChatRoomDto;
 import com.back.domain.chat.dto.CreateChatRoomReqBody;
 import com.back.domain.chat.dto.CreateChatRoomResBody;
@@ -31,6 +32,13 @@ public interface ChatApi {
 
     @Operation(summary = "채팅방 상세 조회 API", description = "특정 채팅방의 상세 정보를 조회합니다.")
     public ResponseEntity<RsData<ChatRoomDto>> getChatRoom(
+            @PathVariable Long id,
+            @AuthenticationPrincipal SecurityUser securityUser
+    );
+
+    @Operation(summary = "채팅방 내 메세지 조회 API", description = "특정 채팅방의 메세지를 조회합니다.")
+    public ResponseEntity<RsData<PagePayload<ChatMessageDto>>> getChatRoomMessages(
+            Pageable pageable,
             @PathVariable Long id,
             @AuthenticationPrincipal SecurityUser securityUser
     );

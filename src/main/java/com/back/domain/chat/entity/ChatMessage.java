@@ -16,11 +16,13 @@ public class ChatMessage extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_member_id")
-    private ChatMember chatMember;
+    @Column(name = "chat_room_id")
+    private Long chatRoomId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
+    @Column(name = "chat_member_id")
+    private Long chatMemberId;
+
+    public static ChatMessage create(String content, Long chatRoomId, Long chatMemberId) {
+        return new ChatMessage(content, chatRoomId, chatMemberId);
+    }
 }

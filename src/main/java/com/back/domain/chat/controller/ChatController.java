@@ -1,5 +1,6 @@
 package com.back.domain.chat.controller;
 
+import com.back.domain.chat.dto.ChatMessageDto;
 import com.back.domain.chat.dto.ChatRoomDto;
 import com.back.domain.chat.dto.CreateChatRoomReqBody;
 import com.back.domain.chat.dto.CreateChatRoomResBody;
@@ -9,7 +10,6 @@ import com.back.global.security.SecurityUser;
 import com.back.standard.util.page.PagePayload;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,7 +33,7 @@ public class ChatController implements ChatApi{
 
     @GetMapping
     public ResponseEntity<RsData<PagePayload<ChatRoomDto>>> getMyChatRooms(
-            @PageableDefault(size = 10, page = 0, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
             @RequestParam(required = false) String keyword,
             @AuthenticationPrincipal SecurityUser securityUser
     ) {
@@ -48,5 +48,15 @@ public class ChatController implements ChatApi{
     ) {
         ChatRoomDto chatRoom = chatService.getChatRoom(chatRoomId, securityUser.getId());
         return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "채팅방 정보", chatRoom));
+    }
+
+    @GetMapping("/{id}/messages")
+    public ResponseEntity<RsData<PagePayload<ChatMessageDto>>> getChatRoomMessages(
+            @PageableDefault(size = 10, page = 0) Pageable pageable,
+            @PathVariable("id") Long chatRoomId,
+            @AuthenticationPrincipal SecurityUser securityUser
+    ) {
+        PagePayload<ChatMessageDto> chatMessages = chatService.getChatMessageList(chatRoomId, securityUser.getId(), pageable);
+        return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "해당 채팅방 내 메세지 목록", chatMessages));
     }
 }
