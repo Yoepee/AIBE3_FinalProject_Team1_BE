@@ -11,6 +11,7 @@ import java.util.List;
 public record HostReservationSummaryResBody(
         Long id,
         Long postId,
+        AuthorDto author,
         ReservationStatus status,
         ReservationDeliveryMethod receiveMethod,
         ReservationDeliveryMethod returnMethod,
@@ -27,6 +28,7 @@ public record HostReservationSummaryResBody(
         this(
                 reservation.getId(),
                 reservation.getPost().getId(),
+                new AuthorDto(reservation.getAuthor()),
                 reservation.getStatus(),
                 reservation.getReceiveMethod(),
                 reservation.getReturnMethod(),
