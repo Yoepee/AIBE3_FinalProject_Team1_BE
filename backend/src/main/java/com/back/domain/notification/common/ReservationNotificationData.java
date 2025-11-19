@@ -1,6 +1,6 @@
 package com.back.domain.notification.common;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record ReservationNotificationData(
         PostInfo postInfo,
@@ -10,8 +10,8 @@ public record ReservationNotificationData(
     public record ReservationInfo(
             Long id,
             Author author,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             String cancelReason,
             String rejectReason
     ) {}

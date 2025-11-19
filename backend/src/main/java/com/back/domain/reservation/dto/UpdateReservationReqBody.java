@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record UpdateReservationReqBody(
@@ -22,9 +23,9 @@ public record UpdateReservationReqBody(
 
         @NotNull
         @Future // 현재 시간 이후일 것
-        LocalDate reservationStartAt,
+        LocalDateTime reservationStartAt,
         @NotNull
         @Future
-        LocalDate reservationEndAt
+        LocalDateTime reservationEndAt
 ) {
 }

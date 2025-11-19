@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record CreateReservationReqBody(
@@ -15,9 +16,9 @@ public record CreateReservationReqBody(
         @NotNull
         ReservationDeliveryMethod returnMethod,
         @NotNull
-        LocalDate reservationStartAt,
+        LocalDateTime reservationStartAt,
         @NotNull
-        LocalDate reservationEndAt,
+        LocalDateTime reservationEndAt,
         @NotNull
         Long postId,
         @Size(max = 5)
