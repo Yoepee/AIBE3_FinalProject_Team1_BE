@@ -45,6 +45,7 @@ public class SecurityConfig {
             "/h2-console/**",          // H2 콘솔 (개발용)
             "/actuator/health", "/actuator/health/**", "/actuator/info",    // Spring Actuator
             "/api/actuator/health", "/api/actuator/health/**", "/api/actuator/info",
+            "/.well-known/acme-challenge/**",
             "/ws-chat/**"
     };
 
