@@ -104,8 +104,8 @@ class ReviewControllerTest {
                 null,  // receiveAddress1
                 null,  // receiveAddress2
                 ReservationDeliveryMethod.DIRECT,  // 또는 DELIVERY
-                LocalDate.now().plusDays(1),  // reservationStartAt
-                LocalDate.now().plusDays(3),  // reservationEndAt
+                LocalDateTime.now().plusDays(1),  // reservationStartAt
+                LocalDateTime.now().plusDays(3),  // reservationEndAt
                 author,
                 null  // Post 객체도 필요
         );

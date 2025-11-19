@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,8 +42,8 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
     @Override
     public boolean existsOverlappingReservation(
             Long postId,
-            LocalDate startAt,
-            LocalDate endAt,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
             Long excludeReservationId) {
 
         Long result = select(reservation.id)
@@ -185,7 +186,7 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
                 : null;
     }
 
-    private BooleanExpression dateOverlap(LocalDate startAt, LocalDate endAt) {
+    private BooleanExpression dateOverlap(LocalDateTime startAt, LocalDateTime endAt) {
         if (startAt == null || endAt == null) {
             return null;
         }

@@ -123,8 +123,8 @@ class ReservationControllerTest {
                 "서울시 강남구",
                 "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 100L,
                 List.of(1L, 2L)
         );
@@ -140,8 +140,8 @@ class ReservationControllerTest {
                 "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
                 null, null, null, null, null,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 List.of(),
@@ -206,8 +206,8 @@ class ReservationControllerTest {
                 "서울시 강남구",
                 "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 100L,
                 List.of(1L, 2L, 3L, 4L, 5L, 6L)  // 6개 (최대 5개)
         );
@@ -232,8 +232,8 @@ class ReservationControllerTest {
                 "서울시 강남구",
                 "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 999L,
                 List.of()
         );
@@ -268,12 +268,13 @@ class ReservationControllerTest {
                         ReservationDeliveryMethod.DELIVERY,
                         ReservationDeliveryMethod.DELIVERY,
                         null, null,
-                        LocalDate.now().plusDays(1),
-                        LocalDate.now().plusDays(3),
+                        LocalDateTime.now().plusDays(1),
+                        LocalDateTime.now().plusDays(3),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         List.of(),
-                        50000
+                        50000,
+                        false
                 )
         );
 
@@ -316,12 +317,13 @@ class ReservationControllerTest {
                         ReservationDeliveryMethod.DELIVERY,
                         ReservationDeliveryMethod.DELIVERY,
                         null, null,
-                        LocalDate.now(),
-                        LocalDate.now().plusDays(2),
+                        LocalDateTime.now(),
+                        LocalDateTime.now().plusDays(2),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         List.of(),
-                        50000
+                        50000,
+                        false
                 )
         );
 
@@ -394,12 +396,13 @@ class ReservationControllerTest {
         List<HostReservationSummaryResBody> reservations = List.of(
                 new HostReservationSummaryResBody(
                         1L, postId,
+                        new AuthorDto(1L, "testUser", "profile.jpg"),
                         ReservationStatus.PENDING_APPROVAL,
                         ReservationDeliveryMethod.DELIVERY,
                         ReservationDeliveryMethod.DELIVERY,
                         null, null,
-                        LocalDate.now().plusDays(1),
-                        LocalDate.now().plusDays(3),
+                        LocalDateTime.now().plusDays(1),
+                        LocalDateTime.now().plusDays(3),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         List.of(),
@@ -467,8 +470,8 @@ class ReservationControllerTest {
                 "서울시 강남구", "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
                 null, null, null, null, null,
-                LocalDate.now(),
-                LocalDate.now().plusDays(2),
+                LocalDateTime.now(),
+                LocalDateTime.now().plusDays(2),
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 List.of(),
@@ -554,8 +557,8 @@ class ReservationControllerTest {
                 null, null, "서울시 강남구", "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
                 null, null, null, null, null,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 List.of(), List.of(), 50000
@@ -618,8 +621,8 @@ class ReservationControllerTest {
                 null, null,
                 ReservationDeliveryMethod.DIRECT,
                 List.of(3L, 4L),
-                LocalDate.now().plusDays(2),
-                LocalDate.now().plusDays(4)
+                LocalDateTime.now().plusDays(2),
+                LocalDateTime.now().plusDays(4)
         );
 
         ReservationDto updatedDto = new ReservationDto(
@@ -630,8 +633,8 @@ class ReservationControllerTest {
                 null, null, null, null,
                 ReservationDeliveryMethod.DIRECT,
                 null, null, null, null, null,
-                LocalDate.now().plusDays(2),
-                LocalDate.now().plusDays(4),
+                LocalDateTime.now().plusDays(2),
+                LocalDateTime.now().plusDays(4),
                 LocalDateTime.now(),
                 LocalDateTime.now(),
                 List.of(), List.of(), 60000
@@ -667,8 +670,8 @@ class ReservationControllerTest {
                 "서울시 서초구", "서초대로 456",
                 ReservationDeliveryMethod.DELIVERY,
                 List.of(),
-                LocalDate.now().plusDays(2),
-                LocalDate.now().plusDays(4)
+                LocalDateTime.now().plusDays(2),
+                LocalDateTime.now().plusDays(4)
         );
 
         when(reservationService.updateReservation(eq(reservationId), eq(testUser.getId()), any()))
@@ -723,8 +726,8 @@ class ReservationControllerTest {
                 ReservationDeliveryMethod.DELIVERY,
                 "서울시 강남구", "테헤란로 123",
                 ReservationDeliveryMethod.DELIVERY,
-                LocalDate.now().plusDays(1),
-                LocalDate.now().plusDays(3),
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(3),
                 100L, List.of()
         );
 

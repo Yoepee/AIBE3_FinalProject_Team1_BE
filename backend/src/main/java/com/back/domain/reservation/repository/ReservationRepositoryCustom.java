@@ -8,13 +8,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface ReservationRepositoryCustom {
     boolean existsOverlappingReservation(
             Long postId,
-            LocalDate startAt,
-            LocalDate endAt,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
             Long excludeReservationId
     );
 

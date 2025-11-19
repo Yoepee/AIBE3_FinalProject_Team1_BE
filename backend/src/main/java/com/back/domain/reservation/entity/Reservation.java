@@ -12,6 +12,7 @@ import lombok.*;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,8 +42,8 @@ public class Reservation extends BaseEntity {
     private String rejectReason;
     private String claimReason;
 
-    private LocalDate reservationStartAt;
-    private LocalDate reservationEndAt;
+    private LocalDateTime reservationStartAt;
+    private LocalDateTime reservationEndAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id")
@@ -65,8 +66,8 @@ public class Reservation extends BaseEntity {
             String receiveAddress1,
             String receiveAddress2,
             ReservationDeliveryMethod returnMethod,
-            LocalDate reservationStartAt,
-            LocalDate reservationEndAt,
+            LocalDateTime reservationStartAt,
+            LocalDateTime reservationEndAt,
             Member author,
             Post post
     ) {
@@ -198,8 +199,8 @@ public class Reservation extends BaseEntity {
             String receiveAddress1,
             String receiveAddress2,
             ReservationDeliveryMethod returnMethod,
-            LocalDate reservationStartAt,
-            LocalDate reservationEndAt,
+            LocalDateTime reservationStartAt,
+            LocalDateTime reservationEndAt,
             List<PostOption> selectedOptions) {
         this.receiveMethod = receiveMethod;
         this.receiveAddress1 = receiveAddress1;

@@ -16,6 +16,7 @@ import com.back.domain.reservation.entity.ReservationOption;
 import com.back.domain.reservation.repository.ReservationLogRepository;
 import com.back.domain.reservation.repository.ReservationQueryRepository;
 import com.back.domain.reservation.repository.ReservationRepository;
+import com.back.domain.review.repository.ReviewQueryRepository;
 import com.back.global.exception.ServiceException;
 import com.back.standard.util.page.PagePayload;
 import com.back.standard.util.page.PageUt;
@@ -26,8 +27,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationQueryRepository reservationQueryRepository;
     private final ReservationLogRepository reservationLogRepository;
+    private final ReviewQueryRepository reviewQueryRepository;
     private final PostService postService;
 
     public ReservationDto create(CreateReservationReqBody reqBody, Member author) {
@@ -50,6 +54,11 @@ public class ReservationService {
 
         // 같은 게스트의 중복 예약 체크 (게시글 ID 필요)
         validateNoDuplicateReservation(post.getId(), author.getId());
+
+        // 자신의 게시글에 대한 예약 금지
+        if (post.getAuthor().getId().equals(author.getId())) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "자신의 게시글에 대한 예약은 불가능합니다.");
+        }
 
         // 전달 방식 유효성 체크
         validateDeliveryMethods(post, reqBody.receiveMethod(), reqBody.returnMethod());
@@ -92,7 +101,7 @@ public class ReservationService {
     }
 
     // 기간 중복 체크
-    private void validateNoOverlappingReservation(Long postId, LocalDate start, LocalDate end, Long excludeId) {
+    private void validateNoOverlappingReservation(Long postId, LocalDateTime start, LocalDateTime end, Long excludeId) {
         boolean hasOverlap = reservationQueryRepository.existsOverlappingReservation(
                 postId, start, end, excludeId
         );
@@ -177,7 +186,16 @@ public class ReservationService {
             Pageable pageable,
             ReservationStatus status,
             String keyword) {
+
         Page<Reservation> reservationPage = reservationQueryRepository.findByAuthorWithFetch(author, status, keyword, pageable);
+
+        // 1. 페이지에 포함된 모든 예약 ID를 추출 (단 1회 실행)
+        List<Long> reservationIds = reservationPage.getContent().stream()
+                .map(Reservation::getId)
+                .toList();
+
+        // 2. 추출된 ID 목록을 사용하여 리뷰가 작성된 ID Set을 DB에서 조회 (단 1회 실행)
+        Set<Long> reviewedReservationIds = reviewQueryRepository.findReviewedReservationIds(reservationIds, author.getId());
 
         // 이제 Lazy Loading 없이 바로 접근 가능
         Page<GuestReservationSummaryResBody> reservationSummaryDtoPage = reservationPage.map(reservation -> {
@@ -194,11 +212,15 @@ public class ReservationService {
                     ))
                     .toList();
 
+            // 3. Set에 해당 예약 ID가 포함되어 있는지 확인하여 hasReview 설정
+            boolean hasReview = reviewedReservationIds.contains(reservation.getId());
+
             return new GuestReservationSummaryResBody(
                     reservation,
                     postSummary,
                     optionDtos,
-                    totalAmount
+                    totalAmount,
+                    hasReview
             );
         });
 
