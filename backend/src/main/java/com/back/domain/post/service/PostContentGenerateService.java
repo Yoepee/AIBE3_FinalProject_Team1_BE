@@ -6,8 +6,8 @@ import com.back.domain.category.repository.CategoryRepository;
 import com.back.domain.post.dto.res.GenPostDetailResBody;
 import com.back.global.optimizer.ImageOptimizer;
 import com.back.standard.util.json.JsonUt;
-import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -17,7 +17,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RequiredArgsConstructor
 @Service
 public class PostContentGenerateService {
 
@@ -30,6 +29,15 @@ public class PostContentGenerateService {
 
     @Value("${custom.ai.user.default-post-detail-gen-prompt}")
     private String defaultUserPrompt;
+
+    public PostContentGenerateService(
+            @Qualifier("gpt51ChatClient") ChatClient chatClient,
+            CategoryRepository categoryRepository,
+            ImageOptimizer imageOptimizer) {
+        this.chatClient = chatClient;
+        this.categoryRepository = categoryRepository;
+        this.imageOptimizer = imageOptimizer;
+    }
 
     public GenPostDetailResBody generatePostDetail(List<MultipartFile> imageFiles, String additionalInfo) {
 
