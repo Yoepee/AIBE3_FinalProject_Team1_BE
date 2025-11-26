@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -140,26 +141,27 @@ public class PostController implements PostApi {
         return ResponseEntity.ok(new RsData<>(HttpStatus.OK, HttpStatus.OK.name(), body));
     }
 
-    @GetMapping("/search")
-    public ResponseEntity<?> searchPosts(
+    @GetMapping("/search/ai")
+    public ResponseEntity<?> searchPostsWithAi(
             @RequestParam String query,
             @AuthenticationPrincipal SecurityUser user
     ) {
 
         Long memberId = (user != null ? user.getId() : null);
 
-        List<PostListResBody> result = postSearchService.searchPosts(query, memberId);
+
+        List<PostListResBody> recommendedPosts = postSearchService.searchPosts(query, memberId);
+
+
+        String answer = postSearchService.searchWithLLM(query, recommendedPosts);
+
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("query", query);
+        result.put("answer", answer);
+        result.put("posts", recommendedPosts);
 
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/search/LLM")
-    public ResponseEntity<?> searchPosts(@RequestParam String query) {
-        String answer = postSearchService.searchWithLLM(query);
-
-        return ResponseEntity.ok(Map.of(
-                "query", query,
-                "answer", answer
-        ));
-    }
 }
