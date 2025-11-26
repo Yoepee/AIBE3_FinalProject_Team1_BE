@@ -56,6 +56,9 @@ public class ReviewService {
         Review review = reviewRepository.findById(id).orElseThrow(
                 () -> new ServiceException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다.")
         );
+        if (review.isBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "이미 제재된 리뷰입니다.");
+        }
         review.ban();
         reviewRepository.save(review);
         return ReviewBannedResBody.of(review);
@@ -66,6 +69,9 @@ public class ReviewService {
         Review review = reviewRepository.findById(id).orElseThrow(
                 () -> new ServiceException(HttpStatus.NOT_FOUND, "리뷰를 찾을 수 없습니다.")
         );
+        if (!review.isBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "제재되지 않은 리뷰입니다.");
+        }
         review.unban();
         reviewRepository.save(review);
         return ReviewBannedResBody.of(review);

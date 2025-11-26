@@ -84,6 +84,9 @@ public class MemberService {
     @Transactional
     public MemberDto banMember(Long memberId) {
         Member member = getById(memberId);
+        if (member.isBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "이미 차단된 회원입니다.");
+        }
         member.ban();
         memberRepository.save(member);
         return new MemberDto(member);
@@ -92,6 +95,9 @@ public class MemberService {
     @Transactional
     public MemberDto unbanMember(Long id) {
         Member member = getById(id);
+        if (!member.isBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "차단되지 않은 회원입니다.");
+        }
         member.unban();
         memberRepository.save(member);
         return new MemberDto(member);

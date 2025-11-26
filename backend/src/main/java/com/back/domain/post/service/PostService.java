@@ -322,6 +322,9 @@ public class PostService {
                 .orElseThrow(
                         () -> new ServiceException(HttpStatus.NOT_FOUND, "%d번 글은 존재하지 않는 게시글입니다.".formatted(postId))
                         );
+        if (post.getIsBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "%d번 글은 이미 차단되었습니다.".formatted(postId));
+        }
         post.ban();
         postRepository.save(post);
         return PostBannedResBody.of(post);
@@ -333,6 +336,9 @@ public class PostService {
                 .orElseThrow(
                         () -> new ServiceException(HttpStatus.NOT_FOUND, "%d번 글은 존재하지 않는 게시글입니다.".formatted(postId))
                 );
+        if (!post.getIsBanned()) {
+            throw new ServiceException(HttpStatus.BAD_REQUEST, "%d번 글은 제재되지 않았습니다.".formatted(postId));
+        }
         post.unban();
         postRepository.save(post);
         return PostBannedResBody.of(post);
