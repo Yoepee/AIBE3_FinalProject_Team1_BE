@@ -21,11 +21,11 @@ public class AuthTokenService {
     private final MemberService memberService; // 권한 변경 시 authVersion 올릴 때 사용
     private final Clock clock = Clock.systemUTC();
 
-    @Value("${custom.jwt.secretKey}")
+    @Value("${custom.jwt.secret-key}")
     private String jwtSecretKey;
-    @Value("${custom.accessToken.expireSeconds}")
+    @Value("${custom.accessToken.expire-seconds}")
     private int accessTokenExpireSeconds;
-    @Value("${custom.refreshToken.expireSeconds}")
+    @Value("${custom.refreshToken.expire-seconds}")
     private int refreshTokenExpireSeconds;
 
     /* =================== 액세스 토큰 (JWT) =================== */

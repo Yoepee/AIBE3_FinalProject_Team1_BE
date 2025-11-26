@@ -90,17 +90,17 @@ resource "aws_security_group" "sg-team1" {
 
   // 인바운드: 모든 IP (0.0.0.0/0)에서 모든 포트 허용 (보안 강화를 위해 최소 포트만 허용하도록 변경 권장)
   ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "all"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "all"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   // 아웃바운드: 모두 허용
   egress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "all"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "all"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -166,7 +166,6 @@ resource "aws_iam_instance_profile" "instance-profile-team1" {
 locals {
   ec2_user_data_base = <<-END_OF_FILE
 #!/bin/bash
-# ... (User Data Script 내용 동일하게 유지) ...
 # 가상 메모리 4GB 설정
 dd if=/dev/zero of=/swapfile bs=128M count=32
 chmod 600 /swapfile
@@ -177,15 +176,15 @@ sh -c 'echo "/swapfile swap swap defaults 0 0" >> /etc/fstab'
 # 타임존 설정
 timedatectl set-timezone Asia/Seoul
 
-# 환경변수 세팅(/etc/environment)
+# 환경변수 세팅(/etc/environment) - 통일된 이름 사용
 echo "PASSWORD_1=${var.password_1}" >> /etc/environment
 echo "APP_1_DOMAIN=${var.app_1_domain}" >> /etc/environment
 echo "APP_1_DB_NAME=${var.app_1_db_name}" >> /etc/environment
 echo "GITHUB_ACCESS_TOKEN_1_OWNER=${var.github_access_token_1_owner}" >> /etc/environment
 echo "GITHUB_ACCESS_TOKEN_1=${var.github_access_token_1}" >> /etc/environment
-echo "CUSTOM__JWT__SECRETKEY=${var.jwt_secret}" >> /etc/environment
-echo "CUSTOM_CORS_ALLOWED_ORIGINS=${var.cors_allowed_origin}" >> /etc/environment
-echo "OPENAI_API_KEY=${var.openai_api_key}" >> /etc/environment
+echo "CUSTOM__JWT__SECRET_KEY=${var.jwt_secret}" >> /etc/environment
+echo "CUSTOM__CORS__ALLOWED__ORIGINS=${var.cors_allowed_origin}" >> /etc/environment
+echo "SPRING__AI__OPENAI__API_KEY=${var.openai_api_key}" >> /etc/environment
 echo "CLOUD__AWS__S3__BUCKET=${var.s3_bucket_name}" >> /etc/environment
 echo "SPRING__MAIL__HOST=${var.mail_host}" >> /etc/environment
 echo "SPRING__MAIL__PORT=${var.mail_port}" >> /etc/environment
@@ -234,31 +233,76 @@ docker run -d \
   -v /dockerProjects/redis_1/volumes/data:/data \
   redis --requirepass ${var.password_1}
 
-# mysql 설치 (mysql_1 컨테이너 이름 유지)
+# MariaDB 설치 (mysql_1 → mariadb_1로 변경)
 docker run -d \
-  --name mysql_1 \
+  --name mariadb_1 \
   --restart unless-stopped \
-  -v /dockerProjects/mysql_1/volumes/var/lib/mysql:/var/lib/mysql \
-  -v /dockerProjects/mysql_1/volumes/etc/mysql/conf.d:/etc/mysql/conf.d \
+  -v /dockerProjects/mariadb_1/volumes/var/lib/mysql:/var/lib/mysql \
+  -v /dockerProjects/mariadb_1/volumes/etc/mysql/conf.d:/etc/mysql/conf.d \
   --network common \
   -p 3306:3306 \
-  -e MYSQL_ROOT_PASSWORD=${var.password_1} \
+  -e MARIADB_ROOT_PASSWORD=${var.password_1} \
+  -e MARIADB_DATABASE=${var.app_1_db_name} \
   -e TZ=Asia/Seoul \
-  mysql:latest
+  mariadb:11.7 \
+  --character-set-server=utf8mb4 \
+  --collation-server=utf8mb4_unicode_ci \
+  --default-time-zone=+09:00
 
-# MySQL 컨테이너가 준비될 때까지 대기
-echo "MySQL이 기동될 때까지 대기 중..."
-until docker exec mysql_1 mysql -uroot -p${var.password_1} -e "SELECT 1" &> /dev/null; do
-  echo "MySQL이 아직 준비되지 않음. 5초 후 재시도..."
+# MariaDB 컨테이너가 준비될 때까지 대기
+echo "MariaDB가 기동될 때까지 대기 중..."
+until docker exec mariadb_1 mariadb -uroot -p${var.password_1} -e "SELECT 1" &> /dev/null; do
+  echo "MariaDB가 아직 준비되지 않음. 5초 후 재시도..."
   sleep 5
 done
-echo "MySQL이 준비됨. 초기화 스크립트 실행 중..."
+echo "MariaDB가 준비됨."
 
-# MySQL 데이터베이스 생성
-docker exec mysql_1 mysql -uroot -p${var.password_1} -e "
-CREATE DATABASE IF NOT EXISTS \`${var.app_1_db_name}\`;
-FLUSH PRIVILEGES;
-"
+# Prometheus 설정 파일 생성
+mkdir -p /dockerProjects/prometheus_1/volumes/etc/prometheus
+cat > /dockerProjects/prometheus_1/volumes/etc/prometheus/prometheus.yml <<'PROM_EOF'
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "java_application"
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: [ "team1-app-001:8080" ]
+        labels:
+          env: "blue"
+
+      - targets: [ "team1-app-002:8080" ]
+        labels:
+          env: "green"
+PROM_EOF
+
+# Prometheus 설치
+docker run -d \
+  --name prometheus_1 \
+  --restart unless-stopped \
+  --network common \
+  -p 9090:9090 \
+  -e TZ=Asia/Seoul \
+  -v /dockerProjects/prometheus_1/volumes/etc/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
+  prom/prometheus
+
+# Grafana 설치
+docker run -d \
+  --name grafana_1 \
+  --restart unless-stopped \
+  --network common \
+  -p 3001:3000 \
+  -e TZ=Asia/Seoul \
+  -e GF_SECURITY_ADMIN_USER=admin \
+  -e GF_SECURITY_ADMIN_PASSWORD=${var.password_1} \
+  -v /dockerProjects/grafana_1/volumes/var/lib/grafana:/var/lib/grafana \
+  grafana/grafana
 
 # GitHub Container Registry 로그인
 echo "${var.github_access_token_1}" |
@@ -268,17 +312,17 @@ docker login ghcr.io -u ${var.github_access_token_1_owner} --password-stdin
 mkdir -p /home/ec2-user/app
 cd /home/ec2-user/app
 
-# .env 파일 생성
+# .env 파일 생성 - 통일된 환경변수 이름 사용
 cat > .env <<'ENV_EOF'
-SPRING__DATASOURCE__URL=jdbc:mysql://mysql_1:3306/${var.app_1_db_name}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+SPRING__DATASOURCE__URL=jdbc:mariadb://mariadb_1:3306/${var.app_1_db_name}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 SPRING__DATASOURCE__USERNAME=root
 SPRING__DATASOURCE__PASSWORD=${var.password_1}
 SPRING__REDIS__HOST=redis_1
 SPRING__REDIS__PORT=6379
 SPRING__REDIS__PASSWORD=${var.password_1}
-CUSTOM__JWT__SECRETKEY=${var.jwt_secret}
-CUSTOM_CORS_ALLOWED_ORIGINS=${var.cors_allowed_origin}
-OPENAI_API_KEY=${var.openai_api_key}
+CUSTOM__JWT__SECRET_KEY=${var.jwt_secret}
+CUSTOM__CORS__ALLOWED__ORIGINS=${var.cors_allowed_origin}
+SPRING__AI__OPENAI__API_KEY=${var.openai_api_key}
 CLOUD__AWS__S3__BUCKET=${var.s3_bucket_name}
 SPRING__MAIL__HOST=${var.mail_host}
 SPRING__MAIL__PORT=${var.mail_port}
@@ -310,9 +354,9 @@ services:
       - SPRING_DATA_REDIS_HOST=$${SPRING__REDIS__HOST}
       - SPRING_DATA_REDIS_PORT=$${SPRING__REDIS__PORT}
       - SPRING_DATA_REDIS_PASSWORD=$${SPRING__REDIS__PASSWORD}
-      - CUSTOM__JWT__SECRETKEY=$${CUSTOM__JWT__SECRETKEY}
-      - CUSTOM_CORS_ALLOWED_ORIGINS=$${CUSTOM_CORS_ALLOWED_ORIGINS}
-      - OPENAI_API_KEY=$${OPENAI_API_KEY}
+      - CUSTOM__JWT__SECRET_KEY=$${CUSTOM__JWT__SECRET_KEY}
+      - CUSTOM__CORS__ALLOWED__ORIGINS=$${CUSTOM__CORS__ALLOWED__ORIGINS}
+      - SPRING__AI__OPENAI__API_KEY=$${SPRING__AI__OPENAI__API_KEY}
       - CLOUD__AWS__S3__BUCKET=$${CLOUD__AWS__S3__BUCKET}
       - SPRING__MAIL__HOST=$${SPRING__MAIL__HOST}
       - SPRING__MAIL__PORT=$${SPRING__MAIL__PORT}
@@ -344,9 +388,9 @@ services:
       - SPRING_DATA_REDIS_HOST=$${SPRING__REDIS__HOST}
       - SPRING_DATA_REDIS_PORT=$${SPRING__REDIS__PORT}
       - SPRING_DATA_REDIS_PASSWORD=$${SPRING__REDIS__PASSWORD}
-      - CUSTOM__JWT__SECRETKEY=$${CUSTOM__JWT__SECRETKEY}
-      - CUSTOM_CORS_ALLOWED_ORIGINS=$${CUSTOM_CORS_ALLOWED_ORIGINS}
-      - OPENAI_API_KEY=$${OPENAI_API_KEY}
+      - CUSTOM__JWT__SECRET_KEY=$${CUSTOM__JWT__SECRET_KEY}
+      - CUSTOM__CORS__ALLOWED__ORIGINS=$${CUSTOM__CORS__ALLOWED__ORIGINS}
+      - SPRING__AI__OPENAI__API_KEY=$${SPRING__AI__OPENAI__API_KEY}
       - CLOUD__AWS__S3__BUCKET=$${CLOUD__AWS__S3__BUCKET}
       - SPRING__MAIL__HOST=$${SPRING__MAIL__HOST}
       - SPRING__MAIL__PORT=$${SPRING__MAIL__PORT}
@@ -483,6 +527,12 @@ echo "Nginx Proxy Manager: http://$PUBLIC_IP:81"
 echo "  - Email: admin@example.com"
 echo "  - Password: ${var.password_1}"
 echo ""
+echo "📊 Monitoring:"
+echo "Prometheus: http://$PUBLIC_IP:9090"
+echo "Grafana: http://$PUBLIC_IP:3001"
+echo "  - User: admin"
+echo "  - Password: ${var.password_1}"
+echo ""
 echo "=========================================="
 echo "📖 Next Steps:"
 echo "1. Login to Nginx Proxy Manager (http://$PUBLIC_IP:81)"
@@ -501,25 +551,25 @@ END_OF_FILE
 // 최신 Amazon Linux 2023 AMI 조회
 data "aws_ami" "latest-amazon-linux" {
   most_recent = true
-  owners = ["amazon"]
+  owners      = ["amazon"]
 
   filter {
-    name = "name"
+    name   = "name"
     values = ["al2023-ami-2023.*-x86_64"]
   }
 
   filter {
-    name = "architecture"
+    name   = "architecture"
     values = ["x86_64"]
   }
 
   filter {
-    name = "virtualization-type"
+    name   = "virtualization-type"
     values = ["hvm"]
   }
 
   filter {
-    name = "root-device-type"
+    name   = "root-device-type"
     values = ["ebs"]
   }
 }
@@ -536,13 +586,13 @@ resource "aws_eip" "eip-team1" {
 
 // EC2 인스턴스 생성
 resource "aws_instance" "ec2-team1" {
-  ami           = data.aws_ami.latest-amazon-linux.id
-  instance_type = "t3.small"
-  key_name = "team1-key"
-  subnet_id     = aws_subnet.subnet-team1-a.id
-  vpc_security_group_ids = [aws_security_group.sg-team1.id]
+  ami                         = data.aws_ami.latest-amazon-linux.id
+  instance_type               = "t3.small"
+  key_name                    = "team1-key"
+  subnet_id                   = aws_subnet.subnet-team1-a.id
+  vpc_security_group_ids      = [aws_security_group.sg-team1.id]
   associate_public_ip_address = true
-  iam_instance_profile = aws_iam_instance_profile.instance-profile-team1.name
+  iam_instance_profile        = aws_iam_instance_profile.instance-profile-team1.name
 
   tags = {
     Name = "${var.prefix}-backend" // team1-backend (배포 대상 EC2 태그)

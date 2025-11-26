@@ -2,7 +2,6 @@ package com.back.domain.member.service;
 
 import com.back.domain.member.common.MemberRole;
 import com.back.domain.member.dto.MemberBannedResBody;
-import com.back.domain.member.dto.MemberDto;
 import com.back.domain.member.dto.MemberJoinReqBody;
 import com.back.domain.member.dto.MemberUpdateReqBody;
 import com.back.domain.member.entity.Member;

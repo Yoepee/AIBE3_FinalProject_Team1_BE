@@ -79,6 +79,9 @@ dependencies {
 
     // OAUTH2
     implementation("org.springframework.boot:spring-boot-starter-oauth2-client")
+
+    // 모니터링
+    implementation("io.micrometer:micrometer-registry-prometheus")
 }
 
 val querydslSrcDir = "src/main/generated"

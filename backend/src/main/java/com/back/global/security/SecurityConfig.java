@@ -49,7 +49,7 @@ public class SecurityConfig {
             "/swagger-ui.html",       // Swagger UI HTML
             "/v3/api-docs", "/v3/api-docs/**", // Swagger OpenApi JSON 문서
             "/h2-console/**",          // H2 콘솔 (개발용)
-            "/actuator/health", "/actuator/health/**", "/actuator/info",    // Spring Actuator
+            "/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus",    // Spring Actuator
             "/api/actuator/health", "/api/actuator/health/**", "/api/actuator/info",
             "/.well-known/acme-challenge/**",
             "/ws-chat/**"

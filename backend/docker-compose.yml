@@ -1,22 +1,6 @@
 version: '3.8'
 
 services:
-  redis:
-    image: redis:7-alpine
-    container_name: chwimeet-redis
-    command: redis-server --requirepass ${SPRING__REDIS__PASSWORD}
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - chwimeet-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${SPRING__REDIS__PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   mariadb:
     image: mariadb:11.7
     container_name: chwimeet-mariadb
@@ -40,7 +24,48 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: chwimeet-redis
+    command: redis-server --requirepass ${SPRING__REDIS__PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - chwimeet-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${SPRING__REDIS__PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  prometheus:
+    image: prom/prometheus
+    container_name: chwimeet-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - chwimeet-network
+    restart: always
+
+  grafana:
+    image: grafana/grafana
+    container_name: chwimeet-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${SPRING__DATASOURCE__PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - chwimeet-network
+    restart: always
+    depends_on:
+      - prometheus
 
   # 선택: Spring Boot 애플리케이션도 Docker Compose로 실행
   # 사용: docker compose --profile full up
@@ -53,16 +78,23 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
-      - SPRING_DATASOURCE_URL=${SPRING__DATASOURCE__URL}
-      - SPRING_DATASOURCE_USERNAME=${SPRING__DATASOURCE__USERNAME}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING__DATASOURCE__PASSWORD}
-      - SPRING_DATA_REDIS_HOST=${SPRING__REDIS__HOST}
-      - SPRING_DATA_REDIS_PORT=${SPRING__REDIS__PORT}
-      - SPRING_DATA_REDIS_PASSWORD=${SPRING__REDIS__PASSWORD}
-      - CUSTOM_JWT_SECRETKEY=${CUSTOM__JWT__SECRETKEY}
-      - CUSTOM_CORS_ALLOWED_ORIGINS=${CUSTOM_CORS_ALLOWED_ORIGINS}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SPRING__DATASOURCE__URL=${SPRING__DATASOURCE__URL}
+      - SPRING__DATASOURCE__USERNAME=${SPRING__DATASOURCE__USERNAME}
+      - SPRING__DATASOURCE__PASSWORD=${SPRING__DATASOURCE__PASSWORD}
+      - SPRING__REDIS__HOST=${SPRING__REDIS__HOST}
+      - SPRING__REDIS__PORT=${SPRING__REDIS__PORT}
+      - SPRING__REDIS__PASSWORD=${SPRING__REDIS__PASSWORD}
+      - CUSTOM__JWT__SECRET_KEY=${CUSTOM__JWT__SECRET_KEY}
+      - CUSTOM__CORS__ALLOWED__ORIGINS=${CUSTOM__CORS__ALLOWED__ORIGINS}
+      - SPRING__AI__OPENAI__API_KEY=${SPRING__AI__OPENAI__API_KEY}
       - CLOUD__AWS__S3__BUCKET=${CLOUD__AWS__S3__BUCKET}
+      - SPRING__MAIL__HOST=${SPRING__MAIL__HOST}
+      - SPRING__MAIL__PORT=${SPRING__MAIL__PORT}
+      - SPRING__MAIL__USERNAME=${SPRING__MAIL__USERNAME}
+      - SPRING__MAIL__PASSWORD=${SPRING__MAIL__PASSWORD}
+      - SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__CLIENT_ID=${SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__CLIENT_ID}
+      - SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__CLIENT_SECRET=${SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__CLIENT_SECRET}
+      - SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__REDIRECT_URI=${SPRING__SECURITY__OAUTH2__CLIENT__REGISTRATION__KAKAO__REDIRECT_URI}
     depends_on:
       mariadb:
         condition: service_healthy
@@ -81,11 +113,11 @@ services:
       - full
 
 volumes:
-  mysql-data:
+  mariadb-data:
     driver: local
   redis-data:
     driver: local
-  mariadb-data:
+  grafana-data:
     driver: local
 
 networks:
