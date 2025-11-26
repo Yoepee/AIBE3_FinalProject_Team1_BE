@@ -22,9 +22,7 @@ public enum NotificationType {
     RESERVATION_CANCELLED(GroupType.RESERVATION),             // 예약 : 예약 취소
 
     // 리마인드 알림
-    REMIND_RENTAL_START(GroupType.RESERVATION),
-    REMIND_RETURN_DUE(GroupType.RESERVATION),
-    REMIND_OVERDUE(GroupType.RESERVATION);
+    REMIND_RETURN_DUE(GroupType.RESERVATION);
 
     private final GroupType groupType;
 

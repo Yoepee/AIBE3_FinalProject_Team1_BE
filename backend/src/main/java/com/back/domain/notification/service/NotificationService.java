@@ -109,7 +109,7 @@ public class NotificationService {
         Notification notification = Notification.create(type, targetId, member);
         Notification saved = notificationRepository.save(notification);
 
-        NotificationResBody<?> dto = toResBody(saved);
+        NotificationResBody<?> dto = EntityToResBody(saved);
 
         sendNotification(targetMemberId, dto);
     }
@@ -211,19 +211,10 @@ public class NotificationService {
         return resBodyList;
     }
 
-    /**
-     * 단일 Notification을 DTO로 변환
-     */
-    private NotificationResBody<?> toResBody(Notification notification) {
-        List<Notification> list = List.of(notification);
-
-        Map<NotificationType.GroupType, Map<Long, ?>> loaded =
-                loadEntitiesByGroup(list);
-
-        List<NotificationResBody<? extends NotificationData>> bodies =
-                mapToResBody(list, loaded);
-
-        return bodies.get(0); // 단일이니까 첫 번째 DTO 반환
+    private NotificationResBody<?> EntityToResBody(Notification notification) {
+        Map<NotificationType.GroupType, Map<Long, ?>> loaded = loadEntitiesByGroup(List.of(notification));
+        List<NotificationResBody<? extends NotificationData>> bodies = mapToResBody(List.of(notification), loaded);
+        return bodies.get(0);
     }
 }
 
