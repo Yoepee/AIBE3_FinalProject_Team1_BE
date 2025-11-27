@@ -22,10 +22,8 @@ public record UpdateReservationReqBody(
         List<Long> optionIds,
 
         @NotNull
-        @Future // 현재 시간 이후일 것
         LocalDateTime reservationStartAt,
         @NotNull
-        @Future
         LocalDateTime reservationEndAt
 ) {
 }

@@ -6,6 +6,7 @@ import com.back.domain.post.entity.Post;
 import com.back.domain.reservation.common.ReservationStatus;
 import com.back.domain.reservation.entity.Reservation;
 import com.back.global.queryDsl.CustomQuerydslRepositorySupport;
+import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +15,9 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static com.back.domain.member.entity.QMember.member;
 import static com.back.domain.post.entity.QPost.post;
@@ -215,5 +218,20 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
         return keyword != null && !keyword.isBlank()
                 ? reservation.post.title.containsIgnoreCase(keyword)
                 : null;
+    }
+
+    public Map<ReservationStatus, Integer> countStatusesByAuthor(Member author) {
+        List<Tuple> results = getQueryFactory()
+                .select(reservation.status, reservation.count())
+                .from(reservation)
+                .where(reservation.author.eq(author))
+                .groupBy(reservation.status)
+                .fetch();
+
+        return results.stream()
+                .collect(Collectors.toMap(
+                        tuple -> tuple.get(reservation.status),
+                        tuple -> tuple.get(reservation.count()).intValue()
+                ));
     }
 }
