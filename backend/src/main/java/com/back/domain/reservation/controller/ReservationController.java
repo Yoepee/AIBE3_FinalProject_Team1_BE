@@ -96,4 +96,15 @@ public class ReservationController implements ReservationApi {
         ReservationDto reservationDto = reservationService.updateReservation(id, securityUser.getId(), reqBody);
         return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "%d번 예약이 수정되었습니다.".formatted(id), reservationDto));
     }
+
+    @GetMapping("/sent/status")
+    public ResponseEntity<RsData<ReservationStatusResBody>> getSentReservationsStatus(
+            @AuthenticationPrincipal SecurityUser securityUser
+    ) {
+        Member author = memberService.getById(securityUser.getId());
+
+        ReservationStatusResBody statusCount = reservationService.getSentReservationsStatusCount(author);
+
+        return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "%d번 게스트의 예약 상태별 개수입니다.".formatted(securityUser.getId()), statusCount));
+    }
 }

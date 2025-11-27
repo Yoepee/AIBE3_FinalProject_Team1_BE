@@ -595,4 +595,15 @@ public class ReservationService {
 
         log.info("PENDING_REFUND → REFUND_COMPLETED 상태 변경 완료 - 처리 건수: {}", reservations.size());
     }
+
+    @Transactional(readOnly = true)
+    public ReservationStatusResBody getSentReservationsStatusCount(Member author) {
+        Map<ReservationStatus, Integer> statusCounts = reservationQueryRepository.countStatusesByAuthor(author);
+
+        // 총 예약 수 계산
+        int totalCount = statusCounts.values().stream().mapToInt(Integer::intValue).sum();
+
+        return new ReservationStatusResBody(statusCounts, totalCount);
+
+    }
 }
