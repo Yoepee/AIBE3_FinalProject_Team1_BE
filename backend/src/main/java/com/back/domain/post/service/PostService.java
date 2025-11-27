@@ -149,6 +149,7 @@ public class PostService {
         return PostDetailResBody.of(post, isFavorite, images);
     }
 
+    @Transactional(readOnly = true)
     public PagePayload<PostListResBody> getMyPosts(Long memberId, Pageable pageable) {
         Page<PostListResBody> result = this.postQueryRepository.findMyPost(memberId, pageable)
                 .map(post -> {

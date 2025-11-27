@@ -1,9 +1,12 @@
 package com.back.domain.home.controller;
 
+import com.zaxxer.hikari.HikariDataSource;
+import com.zaxxer.hikari.HikariPoolMXBean;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpSession;
 import lombok.SneakyThrows;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -50,5 +53,20 @@ public class HomeController {
     @ResponseBody
     public void favicon() {
         // 아무것도 안 함 - 200 OK + 빈 바디
+    }
+
+    @Autowired
+    private HikariDataSource dataSource;
+
+    @GetMapping("/hikari-status")
+    public Map<String, Object> getHikariStatus() {
+        HikariPoolMXBean poolMXBean = dataSource.getHikariPoolMXBean();
+
+        return Map.of(
+                "total", poolMXBean.getTotalConnections(),
+                "active", poolMXBean.getActiveConnections(),
+                "idle", poolMXBean.getIdleConnections(),
+                "waiting", poolMXBean.getThreadsAwaitingConnection()
+        );
     }
 }

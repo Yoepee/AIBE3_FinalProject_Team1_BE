@@ -52,7 +52,8 @@ public class SecurityConfig {
             "/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus",    // Spring Actuator
             "/api/actuator/health", "/api/actuator/health/**", "/api/actuator/info",
             "/.well-known/acme-challenge/**",
-            "/ws-chat/**"
+            "/ws-chat/**",
+            "/hikari-status"
     };
 
     @Bean

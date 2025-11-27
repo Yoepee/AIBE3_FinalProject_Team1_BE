@@ -11,7 +11,7 @@ public record PostAuthorDto(
     public static PostAuthorDto from(Member member) {
         return new PostAuthorDto(
                 member.getId(),
-                member.getName(),
+                member.getNickname(),
                 member.getProfileImgUrl()
         );
     }
