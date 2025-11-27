@@ -66,11 +66,11 @@ public class PostController implements PostApi {
 		@AuthenticationPrincipal SecurityUser user,
 		@ParameterObject @PageableDefault(size = 30, sort = "id", direction = Sort.Direction.DESC) Pageable pageable,
 		@RequestParam(required = false) String keyword,
-		@RequestParam(required = false) Long categoryId,
+		@RequestParam(required = false) List<Long> categoryIds,
 		@RequestParam(required = false) List<Long> regionIds) {
 
 		Long memberId = (user != null) ? user.getId() : null;
-		PagePayload<PostListResBody> body = this.postService.getPostList(pageable, keyword, categoryId, regionIds,
+		PagePayload<PostListResBody> body = this.postService.getPostList(pageable, keyword, categoryIds, regionIds,
 			memberId);
 		return ResponseEntity.ok(new RsData<>(HttpStatus.OK, "성공", body));
 	}

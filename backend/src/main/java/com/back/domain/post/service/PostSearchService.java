@@ -110,6 +110,7 @@ public class PostSearchService {
 
 		String raw = chatClient.prompt(prompt)
 			.options(ChatOptions.builder()
+				.model("gpt-4o-mini")
 				.temperature(1.0)
 				.build())
 			.call()
@@ -170,6 +171,7 @@ public class PostSearchService {
 
 		return chatClient.prompt(prompt)
 			.options(ChatOptions.builder()
+				.model("gpt-4.1-mini")
 				.temperature(1.0)
 				.build())
 			.call()
