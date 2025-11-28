@@ -112,13 +112,22 @@ jooq {
                 jdbc.apply {
                     driver = "org.mariadb.jdbc.Driver"
 
-                    val jooqDbUrl = System.getenv("SPRING__DATASOURCE__URL") ?: ""
-                    val jooqDbUser = System.getenv("SPRING__DATASOURCE__USERNAME") ?: ""
-                    val jooqDbPassword = System.getenv("SPRING__DATASOURCE__PASSWORD") ?: ""
+                    val jooqDbUrl = System.getenv("SPRING__DATASOURCE__URL")
+                        ?: "jdbc:mariadb://localhost:3306/chwimeet"
+                    val jooqDbUser = System.getenv("SPRING__DATASOURCE__USERNAME")
+                        ?: "root"
+                    val jooqDbPassword = System.getenv("SPRING__DATASOURCE__PASSWORD")
+                        ?: System.getenv("DB_PASSWORD") ?: ""
 
                     url = jooqDbUrl.substringBefore("?") // 쿼리스트링은 보통 필요 없음
                     user = jooqDbUser
                     password = jooqDbPassword
+
+                    // ✅ 디버깅: 연결 정보 출력
+                    println("=== JOOQ DB Config ===")
+                    println("URL: $url")
+                    println("USER: $user")
+                    println("PASSWORD: ${if (password.isNotEmpty()) "****" else "(empty)"}")
                 }
 
                 generator.apply {
