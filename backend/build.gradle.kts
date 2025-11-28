@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "3.5.6"
     id("io.spring.dependency-management") version "1.1.7"
+    id("nu.studer.jooq") version "9.0"
     jacoco
 }
 val springAiVersion by extra("1.0.3")
@@ -36,10 +37,12 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-openai")               // Embedding
     implementation("org.springframework.ai:spring-ai-rag")
     implementation("org.springframework.ai:spring-ai-starter-vector-store-mariadb")
+    implementation("org.springframework.boot:spring-boot-starter-jooq")
     compileOnly("org.projectlombok:lombok")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     annotationProcessor("org.projectlombok:lombok")
     implementation("org.mariadb.jdbc:mariadb-java-client:3.5.1")
+    jooqGenerator("org.mariadb.jdbc:mariadb-java-client:3.5.1")
     runtimeOnly("com.h2database:h2")
     
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -96,6 +99,40 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+
+jooq {
+    version.set("3.19.26")
+
+    configurations {
+        create("main") {
+            jooqConfiguration.apply {
+                logging = org.jooq.meta.jaxb.Logging.WARN
+
+                jdbc.apply {
+                    driver = "org.mariadb.jdbc.Driver"
+
+                    val jooqDbUrl = System.getenv("SPRING__DATASOURCE__URL") ?: ""
+                    val jooqDbUser = System.getenv("SPRING__DATASOURCE__USERNAME") ?: ""
+                    val jooqDbPassword = System.getenv("SPRING__DATASOURCE__PASSWORD") ?: ""
+
+                    url = jooqDbUrl.substringBefore("?") // 쿼리스트링은 보통 필요 없음
+                    user = jooqDbUser
+                    password = jooqDbPassword
+                }
+
+                generator.apply {
+                    database.apply {
+                        inputSchema = "chwimeet"
+                    }
+                    target.apply {
+                        packageName = "com.back.jooq"
+                        directory = "$buildDir/generated-src/jooq/main"
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ✅ JaCoCo 버전을 Java 25를 지원하는 최신 버전으로 업데이트

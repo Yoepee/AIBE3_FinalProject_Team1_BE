@@ -24,7 +24,11 @@ public class ReviewQueryRepository extends CustomQuerydslRepositorySupport {
         super(Review.class);
     }
 
-    public Page<ReviewDto> getPostReceivedReviews(Pageable pageable, Long postId){
+    private static float roundValue(double value) {
+        return (float) (Math.round(value * 10) / 10.0);
+    }
+
+    public Page<ReviewDto> findPostReceivedReviews(Pageable pageable, Long postId){
         return applyPagination(pageable,
                 contentQuery -> contentQuery
                         .select(Projections.constructor(ReviewDto.class,
@@ -56,7 +60,7 @@ public class ReviewQueryRepository extends CustomQuerydslRepositorySupport {
         );
     }
 
-    public Page<ReviewDto> getMemberReceivedReviews(Pageable pageable, Long memberId){
+    public Page<ReviewDto> findMemberReceivedReviews(Pageable pageable, Long memberId){
         return applyPagination(pageable,
                 contentQuery -> contentQuery
                         .select(Projections.constructor(ReviewDto.class,
