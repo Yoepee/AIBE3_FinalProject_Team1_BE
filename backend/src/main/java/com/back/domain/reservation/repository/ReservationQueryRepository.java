@@ -1,28 +1,33 @@
 package com.back.domain.reservation.repository;
 
-import com.back.domain.member.entity.QMember;
 import com.back.domain.member.entity.Member;
+import com.back.domain.member.entity.QMember;
 import com.back.domain.post.entity.Post;
 import com.back.domain.reservation.common.ReservationStatus;
 import com.back.domain.reservation.entity.Reservation;
+import com.back.global.app.mcp.dto.CategoryStatsDto;
 import com.back.global.queryDsl.CustomQuerydslRepositorySupport;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.back.domain.category.entity.QCategory.category;
 import static com.back.domain.member.entity.QMember.member;
 import static com.back.domain.post.entity.QPost.post;
 import static com.back.domain.post.entity.QPostImage.postImage;
 import static com.back.domain.post.entity.QPostOption.postOption;
+import static com.back.domain.reservation.common.ReservationStatus.CLAIM_COMPLETED;
+import static com.back.domain.reservation.common.ReservationStatus.REFUND_COMPLETED;
+import static com.back.domain.reservation.common.ReservationStatus.RETURN_COMPLETED;
 import static com.back.domain.reservation.entity.QReservation.reservation;
 import static com.back.domain.reservation.entity.QReservationOption.reservationOption;
 
@@ -165,7 +170,24 @@ public class ReservationQueryRepository extends CustomQuerydslRepositorySupport
         );
     }
 
-
+    public List<CategoryStatsDto> getCategoryStats(LocalDateTime from, LocalDateTime to) {
+        return select(Projections.constructor(
+                CategoryStatsDto.class,
+                category.id,
+                category.name,
+                reservation.count(),
+                post.fee.sum()))
+                .from(reservation)
+                .join(reservation.post, post)
+                .join(post.category, category)
+                .where(
+                        reservation.status.in(RETURN_COMPLETED, REFUND_COMPLETED, CLAIM_COMPLETED),
+                        reservation.createdAt.between(from, to)
+                )
+                .groupBy(category.id, category.name)
+                .orderBy(reservation.count().desc(), post.fee.sum().desc())
+                .fetch();
+    }
 
     // ===== 동적 조건 메서드 (Report 예시 스타일) =====
 
