@@ -97,6 +97,8 @@ jobs:
       # - main 브랜치의 SQL로만 생성 (프로덕션 DB와 무관)
       # ========================================
       - name: Start MariaDB
+        env:
+          SPRING__DATASOURCE__PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           echo "🚀 Starting MariaDB..."
           echo "=== Environment check ==="
@@ -124,14 +126,14 @@ jobs:
 
       - name: Wait for MariaDB
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          SPRING__DATASOURCE__PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
           echo "⏳ Waiting for MariaDB to accept connections..."
           
           MAX_TRIES=30
           COUNTER=0
           
-          until docker exec chwimeet-mariadb mariadb-admin ping -h localhost -uroot -p${DB_PASSWORD} --silent 2>/dev/null; do
+          until docker exec chwimeet-mariadb mariadb-admin ping -h localhost -uroot -p${{ secrets.DB_PASSWORD }} --silent 2>/dev/null; do
             COUNTER=$((COUNTER + 1))
           
             if [ $COUNTER -ge $MAX_TRIES ]; then
