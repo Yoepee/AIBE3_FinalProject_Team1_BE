@@ -84,11 +84,7 @@ jobs:
 
       # 빌드 (테스트 제외 - CI에서 이미 테스트 완료)
       - name: Build with Gradle
-        env:
-          SPRING__DATASOURCE__URL: jdbc:mariadb://localhost:3306/chwimeet
-          SPRING__DATASOURCE__USERNAME: root
-          SPRING__DATASOURCE__PASSWORD: ${{ secrets.DB_PASSWORD }}
-        run: ./gradlew clean bootJar -x test --no-daemon
+        run: ./gradlew clean bootJar -x test -x generateJooq --no-daemon
 
       # Docker 메타데이터 추출
       - name: Extract Docker metadata
