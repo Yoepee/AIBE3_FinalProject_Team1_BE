@@ -1,6 +1,5 @@
 package com.back.domain.review.controller;
 
-import com.back.BaseTestContainer;
 import com.back.domain.category.entity.Category;
 import com.back.domain.category.repository.CategoryRepository;
 import com.back.domain.member.common.MemberRole;
@@ -43,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class ReviewAdmControllerTest extends BaseTestContainer {
+class ReviewAdmControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
