@@ -24,19 +24,18 @@ public class Notification extends BaseEntity {
     @Column(name = "is_read", nullable = false)
     private Boolean isRead = false;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    @Column(name = "member_id", nullable = false)
+    private Long memberId;
 
     public void updateToRead() {
         isRead = true;
     }
 
-    public static Notification create(NotificationType type, Long targetId, Member member) {
+    public static Notification create(NotificationType type, Long targetId, Long memberId) {
         Notification notification = new Notification();
         notification.type = type;
         notification.targetId = targetId;
-        notification.member = member;
+        notification.memberId = memberId;
         notification.isRead = false;
 
         return notification;
