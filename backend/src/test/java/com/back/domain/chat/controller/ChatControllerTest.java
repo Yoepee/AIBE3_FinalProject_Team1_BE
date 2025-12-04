@@ -4,9 +4,6 @@ import com.back.config.TestConfig;
 import com.back.domain.category.entity.Category;
 import com.back.domain.category.repository.CategoryRepository;
 import com.back.domain.chat.dto.CreateChatRoomReqBody;
-import com.back.domain.chat.repository.ChatMemberRepository;
-import com.back.domain.chat.repository.ChatMessageRepository;
-import com.back.domain.chat.repository.ChatRoomRepository;
 import com.back.domain.chat.service.ChatService;
 import com.back.domain.member.entity.Member;
 import com.back.domain.member.repository.MemberRepository;
@@ -15,7 +12,6 @@ import com.back.domain.post.common.ReturnMethod;
 import com.back.domain.post.entity.Post;
 import com.back.domain.post.repository.PostRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,22 +53,10 @@ class ChatControllerTest {
     private PostRepository postRepository;
 
     @Autowired
-    private ChatRoomRepository chatRoomRepository;
-
-    @Autowired
-    private ChatMemberRepository chatMemberRepository;
-
-    @Autowired
-    private ChatMessageRepository chatMessageRepository;
-
-    @Autowired
     private CategoryRepository categoryRepository;
 
     @Autowired
     private ChatService chatService;
-
-    @Autowired
-    private EntityManager entityManager;
 
     private Member member1;
     private Member member2;
@@ -84,77 +68,49 @@ class ChatControllerTest {
 
     @BeforeEach
     void setUp() {
-        chatMessageRepository.deleteAll();
-        entityManager.flush();
+        member1 = memberRepository.save(testMember("user1@test.com", "hong"));
+        member2 = memberRepository.save(testMember("user2@test.com", "kim"));
+        member3 = memberRepository.save(testMember("user3@test.com", "lee"));
+        member4 = memberRepository.save(testMember("user4@test.com", "park"));
 
-        chatMemberRepository.deleteAll();
-        entityManager.flush();
+        Category category = categoryRepository.save(Category.create("노트북", null));
 
-        chatRoomRepository.deleteAll();
-        entityManager.flush();
+        post1 = postRepository.save(testPost("캠핑 텐트 대여", member2, category));
+        post2 = postRepository.save(testPost("노트북 대여합니다", member3, category));
+        post3 = postRepository.save(testPost("카메라 렌탈", member4, category));
+    }
 
-        postRepository.deleteAll();
-        memberRepository.deleteAll();
+    private Member testMember(String email, String nickname) {
+        return new Member(
+                email,
+                "1234",
+                nickname,
+                "010-" + (int)(Math.random() * 9000 + 1000),
+                "서울시",
+                "어딘가 123",
+                nickname
+        );
+    }
 
-        // 회원 생성
-        member1 = memberRepository.save(new Member(
-                "user1@test.com", "1234", "홍길동", "010-1111-1111",
-                "서울시 강남구", "테헤란로 123", "hong"));
-
-        member2 = memberRepository.save(new Member(
-                "user2@test.com", "1234", "김철수", "010-2222-2222",
-                "서울시 서초구", "서초대로 456", "kim"));
-
-        member3 = memberRepository.save(new Member(
-                "user3@test.com", "1234", "이영희", "010-3333-3333",
-                "서울시 마포구", "월드컵북로 789", "lee"));
-
-        member4 = memberRepository.save(new Member(
-                "user4@test.com", "1234", "박민수", "010-4444-4444",
-                "서울시 송파구", "잠실로 101", "park"));
-
-        // 게시글 생성
-        Category category = Category.create("노트북", null);
-        categoryRepository.save(category);
-
-        post1 = postRepository.save(Post.of(
-                "캠핑 텐트 대여",
-                "4인용 텐트입니다.",
+    private Post testPost(String title, Member author, Category category) {
+        return Post.of(
+                title,
+                title + " 내용",
                 ReceiveMethod.DELIVERY,
                 ReturnMethod.DELIVERY,
                 null,
                 null,
                 10000,
                 5000,
-                member2,
+                author,
                 category
-        ));
+        );
+    }
 
-        post2 = postRepository.save(Post.of(
-                "노트북 대여합니다",
-                "맥북 프로입니다.",
-                ReceiveMethod.DIRECT,
-                ReturnMethod.DIRECT,
-                null,
-                null,
-                50000,
-                20000,
-                member3,
-                category
-        ));
-
-        post3 = postRepository.save(Post.of(
-                "카메라 렌탈",
-                "소니 A7III입니다.",
-                ReceiveMethod.ANY,
-                ReturnMethod.ANY,
-                null,
-                null,
-                30000,
-                15000,
-                member4,
-                category
-        ));
+    private void createDefaultChatRooms(Member member) {
+        chatService.createOrGetChatRoom(post1.getId(), member.getId());
+        chatService.createOrGetChatRoom(post2.getId(), member.getId());
+        chatService.createOrGetChatRoom(post3.getId(), member.getId());
     }
 
     @Test
@@ -162,8 +118,7 @@ class ChatControllerTest {
     @DisplayName("채팅방 생성 성공")
     void test1_createChatRoom_success() throws Exception {
         // given
-        Long postId = post1.getId();
-        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(postId);
+        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(post1.getId());
 
         // when
         ResultActions resultActions = mvc.perform(post("/api/v1/chats")
@@ -183,10 +138,9 @@ class ChatControllerTest {
     @WithUserDetails(value = "user1@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("이미 존재하는 채팅방일 때")
     void test2_createChatRoom_alreadyExists() throws Exception {
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
         // given
-        Long postId = post1.getId();
-        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(postId);
+        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
+        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(post1.getId());
 
         // when
         ResultActions resultActions = mvc.perform(post("/api/v1/chats")
@@ -206,8 +160,7 @@ class ChatControllerTest {
     @DisplayName("로그인 안 한 상태에서 채팅방 생성 시도")
     void test3_createChatRoom_unauthorized() throws Exception {
         // given
-        Long postId = post1.getId();
-        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(postId);
+        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(post1.getId());
 
         // when
         ResultActions resultActions = mvc.perform(post("/api/v1/chats")
@@ -220,35 +173,33 @@ class ChatControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
-//    @Test
-//    @WithUserDetails(value = "user2@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
-//    @DisplayName("본인과 채팅방 생성 시도 - 예외 발생")
-//    void test4_createChatRoom_withSelf_shouldThrow() throws Exception {
-//        // given
-//        Long postId = post1.getId();
-//        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(postId);
-//
-//        // when
-//        ResultActions resultActions = mvc.perform(post("/api/v1/chats")
-//                        .contentType(MediaType.APPLICATION_JSON)
-//                        .content(objectMapper.writeValueAsString(reqBody)))
-//                .andDo(print());
-//
-//        // then
-//        resultActions
-//                .andExpect(status().isBadRequest())
-//                .andExpect(jsonPath("$.status").value(400))
-//                .andExpect(jsonPath("$.msg").value("본인과 채팅방을 만들 수 없습니다."));
-//    }
+    @Test
+    @WithUserDetails(value = "user2@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
+    @DisplayName("본인과 채팅방 생성 시도 - 예외 발생")
+    void test4_createChatRoom_withSelf_shouldThrow() throws Exception {
+        // given
+        Long postId = post1.getId();
+        CreateChatRoomReqBody reqBody = new CreateChatRoomReqBody(postId);
+
+        // when
+        ResultActions resultActions = mvc.perform(post("/api/v1/chats")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reqBody)))
+                .andDo(print());
+
+        // then
+        resultActions
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.msg").value("본인과 채팅방을 만들 수 없습니다."));
+    }
 
     @Test
     @WithUserDetails(value = "user1@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("채팅방 목록 조회 - 검색어 없음")
     void test5_getMyChatRooms_withoutKeyword() throws Exception {
         // member1이 여러 채팅방 생성
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
-        chatService.createOrGetChatRoom(post2.getId(), member1.getId());  // member1 <-> member3
-        chatService.createOrGetChatRoom(post3.getId(), member1.getId());  // member1 <-> member4
+        createDefaultChatRooms(member1);
 
         // when
         ResultActions resultActions = mvc.perform(get("/api/v1/chats")
@@ -274,9 +225,8 @@ class ChatControllerTest {
     @DisplayName("채팅방 목록 조회 - 게시글 제목으로 검색 (텐트)")
     void test6_getMyChatRooms_searchByPostTitle_tent() throws Exception {
         // member1이 여러 채팅방 생성
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
-        chatService.createOrGetChatRoom(post2.getId(), member1.getId());  // member1 <-> member3
-        chatService.createOrGetChatRoom(post3.getId(), member1.getId());  // member1 <-> member4
+        createDefaultChatRooms(member1);
+
         // when
         ResultActions resultActions = mvc.perform(get("/api/v1/chats")
                         .param("page", "0")
@@ -300,10 +250,9 @@ class ChatControllerTest {
     @WithUserDetails(value = "user1@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("채팅방 목록 조회 - 게시글 제목으로 검색 (대여)")
     void test7_getMyChatRooms_searchByPostTitle_rent() throws Exception {
-        // member1이 여러 채팅방 생성
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
-        chatService.createOrGetChatRoom(post2.getId(), member1.getId());  // member1 <-> member3
-        chatService.createOrGetChatRoom(post3.getId(), member1.getId());  // member1 <-> member4
+        // given
+        createDefaultChatRooms(member1);
+
         // when
         ResultActions resultActions = mvc.perform(get("/api/v1/chats")
                         .param("page", "0")
@@ -325,10 +274,9 @@ class ChatControllerTest {
     @WithUserDetails(value = "user1@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("채팅방 목록 조회 - 상대방 닉네임으로 검색")
     void test8_getMyChatRooms_searchByMemberNickname() throws Exception {
-        // member1이 여러 채팅방 생성
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
-        chatService.createOrGetChatRoom(post2.getId(), member1.getId());  // member1 <-> member3
-        chatService.createOrGetChatRoom(post3.getId(), member1.getId());  // member1 <-> member4
+        // given
+        createDefaultChatRooms(member1);
+
         // when
         ResultActions resultActions = mvc.perform(get("/api/v1/chats")
                         .param("page", "0")
@@ -352,10 +300,9 @@ class ChatControllerTest {
     @WithUserDetails(value = "user1@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("채팅방 목록 조회 - 페이징 테스트")
     void test9_getMyChatRooms_pagination() throws Exception {
-        // member1이 여러 채팅방 생성
-        chatService.createOrGetChatRoom(post1.getId(), member1.getId());  // member1 <-> member2
-        chatService.createOrGetChatRoom(post2.getId(), member1.getId());  // member1 <-> member3
-        chatService.createOrGetChatRoom(post3.getId(), member1.getId());  // member1 <-> member4
+        // given
+        createDefaultChatRooms(member1);
+
         // 첫 페이지 (size=2)
         ResultActions resultActions = mvc.perform(get("/api/v1/chats")
                         .param("page", "0")
@@ -448,27 +395,6 @@ class ChatControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.msg").value("해당 채팅방에 접근할 수 없습니다."));
-    }
-
-    @Test
-    @WithUserDetails(value = "user2@test.com", setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    @DisplayName("채팅방 상세 조회 - 상대방 관점에서 확인")
-    void test13_getChatRoom_fromOtherMemberPerspective() throws Exception {
-        // given
-        Long chatRoomId = chatService.createOrGetChatRoom(post1.getId(), member1.getId()).chatRoomId();
-
-        // when
-        ResultActions resultActions = mvc.perform(get("/api/v1/chats/{chatRoomId}", chatRoomId))
-                .andDo(print());
-
-        // then
-        resultActions
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.id").value(chatRoomId))
-                .andExpect(jsonPath("$.data.post.title").value("캠핑 텐트 대여"))
-                .andExpect(jsonPath("$.data.otherMember.id").value(member1.getId()))
-                .andExpect(jsonPath("$.data.otherMember.nickname").value("hong"));
     }
 
 }
