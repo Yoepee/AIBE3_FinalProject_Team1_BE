@@ -41,7 +41,7 @@ public interface ChatApi {
             @AuthenticationPrincipal SecurityUser securityUser
     );
 
-    @Operation(summary = "채팅방 내 메세지 조회 API", description = "특정 채팅방 내 특정 메세지까지 모두 읽음 처리합니다.")
+    @Operation(summary = "채팅방 내 특정 메세지까지 읽음 처리 API", description = "채팅방 내 특정 메세지까지 모두 읽음 처리합니다.")
     public ResponseEntity<RsData<Void>> markAsRead(
             @PathVariable Long id,
             @RequestParam Long lastMessageId,
