@@ -52,13 +52,29 @@ class PostControllerTest {
 
 		mockMvc.perform(get("/api/v1/posts")
 				.param("page", "0")
-				.param("size", "10"))
+				.param("size", "30"))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.msg").value("성공"))
 			.andExpect(jsonPath("$.data.page.page").value(0))
-			.andExpect(jsonPath("$.data.page.size").value(10))
+			.andExpect(jsonPath("$.data.page.size").value(30))
 			.andExpect(jsonPath("$.data.content").isArray())
 			.andExpect(jsonPath("$.data.content.length()").value(6));
 	}
 
+	@Test
+	@DisplayName("내 게시글 조회 테스트")
+	@WithUserDetails("user1@example.com")
+	void getMyPosts_success() throws Exception {
+
+		mockMvc.perform(get("/api/v1/posts/my")
+				.param("page", "0")
+				.param("size", "30"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.msg").value("성공"))
+			.andExpect(jsonPath("$.data.page.page").value(0))
+			.andExpect(jsonPath("$.data.page.size").value(30))
+			.andExpect(jsonPath("$.data.content").isArray())
+			.andExpect(jsonPath("$.data.content.length()").value(3));
+
+	}
 }
