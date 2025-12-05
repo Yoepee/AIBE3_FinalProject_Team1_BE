@@ -24,23 +24,4 @@ public record UpdateReservationReqBody(
         @NotNull
         LocalDateTime reservationEndAt
 ) {
-        public static UpdateReservationReqBody of(
-                ReservationDeliveryMethod receiveMethod,
-                String receiveAddress1,
-                String receiveAddress2,
-                ReservationDeliveryMethod returnMethod,
-                List<Long> optionIds,
-                LocalDateTime reservationStartAt,
-                LocalDateTime reservationEndAt
-        ) {
-                return new UpdateReservationReqBody(
-                        receiveMethod,
-                        receiveAddress1,
-                        receiveAddress2,
-                        returnMethod,
-                        optionIds,
-                        reservationStartAt,
-                        reservationEndAt
-                );
-        }
 }
