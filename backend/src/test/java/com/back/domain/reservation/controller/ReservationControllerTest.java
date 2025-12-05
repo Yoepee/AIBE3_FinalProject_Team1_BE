@@ -17,7 +17,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Sql("/sql/reservations.sql")
+@Sql({
+        "/sql/categories.sql",
+        "/sql/regions.sql",
+        "/sql/members.sql",
+        "/sql/posts.sql",
+        "/sql/reservations.sql",
+        "/sql/reviews.sql",
+        "/sql/notifications.sql"
+})
+@Sql(scripts = "/sql/clean-up.sql", executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD)
 class ReservationControllerTest extends BaseContainerIntegrationTest {
 
     @Autowired
@@ -65,6 +74,25 @@ class ReservationControllerTest extends BaseContainerIntegrationTest {
                         jsonPath("$.data.createdAt").exists(),
                         jsonPath("$.data.modifiedAt").exists()
                 );
+    }
 
+    @Test
+    @WithUserDetails("user1@example.com")
+    @DisplayName("사용자가 보낸 예약 목록 조회 테스트")
+    void getSentReservationsTest() throws Exception {
+        // 멤버1은 reservation ID: 1,2,3 을 가지고 있음
+        mockMvc.perform(get("/api/v1/reservations/sent")
+                        .param("page", "0")
+                        .param("size", "5"))
+                .andExpectAll(
+                        status().isOk(),
+                        jsonPath("$.status").value(200),
+                        jsonPath("$.data.content").isArray(),
+                        jsonPath("$.data.content", hasSize(greaterThanOrEqualTo(0))),
+                        jsonPath("$.data.page").exists(),
+                        jsonPath("$.data.size").exists(),
+                        jsonPath("$.data.totalElements").exists(),
+                        jsonPath("$.data.totalPages").exists()
+                );
     }
 }
