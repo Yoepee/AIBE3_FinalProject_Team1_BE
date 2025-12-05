@@ -15,4 +15,4 @@ VALUES
     (6, NOW(), NOW(), NULL, NULL, '경기도 성남시', '분당동', 'CJ대한통운', 'DELIVERY', 'TRK200005', NULL, NOW() + INTERVAL 5 DAY, NOW(), 'CJ대한통운', 'DELIVERY', 'TRK200006', 'CLAIM_COMPLETED', 2, 3),
 
     -- 추가 예약 데이터 (멤버 2가 멤버 1의 Post 하나 예약)
-    (7, NOW(), NOW(), NULL, NULL, '서울특별시 서초구', '반포동', '롯데택배', 'DELIVERY', 'TRK300001', NULL, NOW() + INTERVAL 15 DAY, NOW() + INTERVAL 7 DAY, '롯데택배', 'DELIVERY', 'TRK300002', 'PENDING_APPROVAL', 2, 1);
+    (7, NOW(), NOW(), NULL, NULL, NULL, NULL, NULL, 'DIRECT', NULL, NULL, NOW() + INTERVAL 15 DAY, NOW() + INTERVAL 7 DAY, NULL, 'DIRECT', NULL, 'PENDING_APPROVAL', 2, 1);

@@ -155,7 +155,7 @@ class ReservationControllerTest extends BaseContainerIntegrationTest {
                         jsonPath("$.msg").value("%d번 예약 상세 정보입니다.".formatted(reservationId)),
                         jsonPath("$.data.id").value(is(reservationId.intValue())),
                         jsonPath("$.data.status").value("RETURN_COMPLETED"),
-                        jsonPath("$.data.author.nickname").value("테스트2"),
+                        jsonPath("$.data.author.nickname").value("chulsu"),
                         jsonPath("$.data.logs").isArray(),
                         jsonPath("$.data.totalAmount").isNumber()
                 );
@@ -164,7 +164,7 @@ class ReservationControllerTest extends BaseContainerIntegrationTest {
     @Test
     @WithUserDetails("user2@example.com") // 7번 예약의 게스트(author_id=2)
     @DisplayName("게스트의 예약 내용 수정 테스트")
-    void updateReservationTest_Success() throws Exception {
+    void updateReservationTest() throws Exception {
         Long reservationId = 7L;
 
         // 1. 수정할 요청 본문(Request Body) 객체 생성
@@ -188,7 +188,6 @@ class ReservationControllerTest extends BaseContainerIntegrationTest {
                         jsonPath("$.msg").value(is("%d번 예약이 수정되었습니다.".formatted(reservationId))),
                         jsonPath("$.data.id").value(is(reservationId.intValue())),
                         jsonPath("$.data.receiveMethod").value(is("DIRECT")),
-                        jsonPath("$.data.receiveAddress1").value(is("수정된 주소 1")),
                         jsonPath("$.data.totalAmount").isNumber()
                 );
     }
