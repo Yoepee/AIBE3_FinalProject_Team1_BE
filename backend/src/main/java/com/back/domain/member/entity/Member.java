@@ -53,33 +53,16 @@ public class Member extends BaseEntity {
     @Column
     private String profileImgUrl;
 
-    public Member(String email, String password, String name, String phoneNumber,
-                  String address1, String address2, String nickname, MemberRole role, String profileImgUrl) {
-        this.email = email;
-        this.password = password;
-        this.name = name;
-        this.phoneNumber = phoneNumber;
-        this.address1 = address1;
-        this.address2 = address2;
-        this.nickname = nickname;
-        this.isBanned = false;
-        this.role = role;
-        this.profileImgUrl = profileImgUrl;
+    public static Member createForJoin(String email, String password, String nickname) {
+        return new Member(email, password, null, null, null, null, nickname, false, MemberRole.USER, null);
     }
 
-    public Member(String email, String password, String name, String phoneNumber,
-                  String address1, String address2, String nickname, MemberRole role) {
-        this(email, password, name, phoneNumber, address1, address2, nickname, role, null);
+    public static Member createForAdmin(String email, String password, String nickname) {
+        return new Member(email, password, null, null, null, null, nickname, false, MemberRole.ADMIN, null);
     }
-    public Member(String email, String password, String name, String phoneNumber,
-                  String address1, String address2, String nickname) {
-        this(email, password, name, phoneNumber, address1, address2, nickname, MemberRole.USER, null);
-    }
-    public Member(String email, String password, String nickname, MemberRole role) {
-        this(email, password, null, null, null, null, nickname, role, null);
-    }
-    public Member(String email, String password, String nickname, MemberRole role, String profileImgUrl) {
-        this(email, password, null, null, null, null, nickname, role, profileImgUrl);
+
+    public static Member createForOAuth(String email,String nickname, String profileImgUrl) {
+        return new Member(email, "", null, null, null, null, nickname, false, MemberRole.USER, profileImgUrl);
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {
