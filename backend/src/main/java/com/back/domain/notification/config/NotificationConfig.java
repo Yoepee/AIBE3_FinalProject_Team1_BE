@@ -1,6 +1,8 @@
 package com.back.domain.notification.config;
 
+import com.back.domain.notification.common.NotificationData;
 import com.back.domain.notification.common.NotificationType;
+import com.back.domain.notification.mapper.NotificationDataMapper;
 import com.back.domain.reservation.entity.Reservation;
 import com.back.domain.reservation.repository.ReservationQueryRepository;
 import com.back.domain.review.entity.Review;
@@ -32,5 +34,20 @@ public class NotificationConfig {
                         .stream().collect(Collectors.toMap(Review::getId, r -> r))
         );
         return batchLoaders;
+    }
+
+    @Bean
+    public Map<NotificationType, NotificationDataMapper<? extends NotificationData>> mapperRegistry(
+            List<NotificationDataMapper<? extends NotificationData>> mappers
+    ) {
+        Map<NotificationType, NotificationDataMapper<? extends NotificationData>> map = new HashMap<>();
+        for (NotificationDataMapper<?> mapper : mappers) {
+            for (NotificationType type : NotificationType.values()) {
+                if (mapper.supports(type)) {
+                    map.put(type, mapper);
+                }
+            }
+        }
+        return map;
     }
 }

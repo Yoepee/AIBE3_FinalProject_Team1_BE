@@ -33,7 +33,7 @@ public class NotificationService {
     private final MemberRepository memberRepository;
     private final NotificationRepository notificationRepository;
     private final NotificationQueryRepository notificationQueryRepository;
-    private final List<NotificationDataMapper<? extends NotificationData>> mappers;
+    private final Map<NotificationType, NotificationDataMapper<? extends NotificationData>> mapperRegistry;
     private final Map<NotificationType.GroupType, Function<List<Long>, Map<Long, ?>>> batchLoaders = new HashMap<>();
     private final SseNotificationService sseNotificationService;
 
@@ -115,22 +115,19 @@ public class NotificationService {
     ) {
         List<NotificationResBody<? extends NotificationData>> resBodyList = new ArrayList<>();
         for (Notification notification : notifications) {
-            for (NotificationDataMapper<? extends NotificationData> mapper : mappers) {
-                if (mapper.supports(notification.getType())) {
+            NotificationDataMapper<? extends NotificationData> mapper = mapperRegistry.get(notification.getType());
 
-                    Map<Long, ?> entityMap = loadedEntities.get(notification.getType().getGroupType());
-                    Object entity = entityMap != null ? entityMap.get(notification.getTargetId()) : null;
+            Map<Long, ?> entityMap = loadedEntities.get(notification.getType().getGroupType());
+            Object entity = entityMap != null ? entityMap.get(notification.getTargetId()) : null;
 
-                    NotificationData data = mapper.map(entity, notification);
-                    resBodyList.add(new NotificationResBody<>(
-                            notification.getId(),
-                            notification.getType(),
-                            notification.getCreatedAt(),
-                            notification.getIsRead(),
-                            data
-                    ));
-                }
-            }
+            NotificationData data = mapper.map(entity, notification);
+            resBodyList.add(new NotificationResBody<>(
+                    notification.getId(),
+                    notification.getType(),
+                    notification.getCreatedAt(),
+                    notification.getIsRead(),
+                    data
+            ));
         }
         return resBodyList;
     }
