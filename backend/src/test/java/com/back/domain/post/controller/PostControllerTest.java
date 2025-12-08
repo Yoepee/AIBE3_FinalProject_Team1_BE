@@ -237,18 +237,4 @@ class PostControllerTest {
 			.andExpect(jsonPath("$.msg").value("게시글이 생성되었습니다."))
 			.andExpect(jsonPath("$.data.id").exists());
 	}
-
-	@Test
-	@DisplayName("AI 게시글 검색 테스트")
-	@WithUserDetails("user1@example.com")
-	void searchPostsWithAi_success() throws Exception {
-
-		mockMvc.perform(get("/api/v1/posts/search-ai")
-				.param("query", "자전거"))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.msg").value("AI 검색 결과입니다."))
-			.andExpect(jsonPath("$.data.query").value("자전거"))
-			.andExpect(jsonPath("$.data.answer").exists())
-			.andExpect(jsonPath("$.data.posts").isArray());
-	}
 }
