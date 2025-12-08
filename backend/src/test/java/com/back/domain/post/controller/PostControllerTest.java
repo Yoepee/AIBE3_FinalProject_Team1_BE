@@ -1,21 +1,27 @@
 package com.back.domain.post.controller;
 
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.back.config.TestConfig;
+import com.back.global.s3.S3Uploader;
 
 @ActiveProfiles("test")
 @SpringBootTest
@@ -35,6 +41,20 @@ class PostControllerTest {
 
 	@Autowired
 	MockMvc mockMvc;
+
+	@MockitoBean
+	private S3Uploader s3Uploader;
+
+	@BeforeEach
+	void setup() {
+		when(s3Uploader.upload(any()))
+			.thenReturn("https://bucket.s3.ap-northeast-2.amazonaws.com/post/test.jpg");
+
+		doNothing().when(s3Uploader).delete(anyString());
+
+		when(s3Uploader.generatePresignedUrl(anyString()))
+			.thenReturn("https://bucket.fake-url.com/presigned");
+	}
 
 	@Test
 	@DisplayName("게시글 단건 조회 테스트")
@@ -188,4 +208,52 @@ class PostControllerTest {
 			.andExpect(jsonPath("$.msg").value("게시글이 수정되었습니다."));
 	}
 
+	@Test
+	@DisplayName("게시글 생성 테스트")
+	@WithUserDetails("user1@example.com")
+	void createPost_success() throws Exception {
+
+		String reqBody = """
+			{
+			  	  "title": "새로운 게시글",
+			      "content": "게시글 내용",
+			      "receiveMethod": "DIRECT",
+			      "returnMethod": "DIRECT",
+			      "returnAddress1": "서울특별시 강남구",
+			      "returnAddress2": "역삼동",
+			      "regionIds": [1],
+			      "categoryId": 1,
+			      "deposit": 5000,
+			      "fee": 3000,
+			      "options": [],
+			      "images": [
+			          {
+			              "isPrimary": true
+			          }
+			      ]
+			}
+			""";
+
+		MockMultipartFile image = new MockMultipartFile(
+			"images",
+			"image1.jpg",
+			"image/jpeg",
+			"dummy-image".getBytes()
+		);
+
+		MockMultipartFile json = new MockMultipartFile(
+			"request",
+			"request.json",
+			"application/json",
+			reqBody.getBytes()
+		);
+
+		mockMvc.perform(multipart("/api/v1/posts")
+				.file(json)
+				.file(image)
+				.contentType(MediaType.MULTIPART_FORM_DATA))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.msg").value("게시글이 생성되었습니다."))
+			.andExpect(jsonPath("$.data.id").exists());
+	}
 }
