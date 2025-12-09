@@ -1,9 +1,7 @@
 package com.back.domain.post.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,7 +16,6 @@ import com.back.domain.member.entity.Member;
 import com.back.domain.member.repository.MemberRepository;
 import com.back.domain.post.dto.req.PostCreateReqBody;
 import com.back.domain.post.dto.req.PostEmbeddingDto;
-import com.back.domain.post.dto.req.PostImageReqBody;
 import com.back.domain.post.dto.req.PostUpdateReqBody;
 import com.back.domain.post.dto.res.PostBannedResBody;
 import com.back.domain.post.dto.res.PostCreateResBody;
@@ -38,7 +35,6 @@ import com.back.domain.post.repository.PostRepository;
 import com.back.domain.region.entity.Region;
 import com.back.domain.region.repository.RegionRepository;
 import com.back.global.exception.ServiceException;
-import com.back.global.s3.S3Uploader;
 import com.back.standard.util.page.PagePayload;
 import com.back.standard.util.page.PageUt;
 
@@ -58,7 +54,7 @@ public class PostService {
 	private final PostFavoriteQueryRepository postFavoriteQueryRepository;
 	private final PostVectorService postVectorService;
 	private final PostTransactionService postTransactionService;
-	private final S3Uploader s3;
+	private final PostImageService postImageService;
 
 	private final RegionRepository regionRepository;
 	private final CategoryRepository categoryRepository;
@@ -97,25 +93,8 @@ public class PostService {
 			post.getOptions().addAll(postOptions);
 		}
 
-		if (images != null && !images.isEmpty()) {
-
-			List<PostImage> postImages = new ArrayList<>();
-
-			for (int i = 0; i < images.size(); i++) {
-				MultipartFile image = images.get(i);
-
-				String url = s3.upload(image);
-
-				boolean isPrimary = false;
-				if (reqBody.images() != null && reqBody.images().size() > i) {
-					isPrimary = reqBody.images().get(i).isPrimary();
-				}
-
-				postImages.add(new PostImage(post, url, isPrimary));
-			}
-
-			post.resetPostImages(postImages);
-		}
+		List<PostImage> postImages = postImageService.createImages(post, images, reqBody.images());
+		post.resetPostImages(postImages);
 
 		List<PostRegion> postRegions = regions.stream().map(region -> new PostRegion(post, region)).toList();
 
@@ -144,12 +123,7 @@ public class PostService {
 			boolean isFavorite = memberId != null && !post.getAuthor().getId().equals(memberId)
 				&& this.postFavoriteRepository.findByMemberIdAndPostId(memberId, post.getId()).isPresent();
 
-			String thumbnail = post.getImages()
-				.stream()
-				.filter(PostImage::getIsPrimary)
-				.findFirst()
-				.map(img -> s3.generatePresignedUrl(img.getImageUrl()))
-				.orElse(null);
+			String thumbnail = postImageService.toThumbnailUrl(post);
 
 			return PostListResBody.of(post, isFavorite, thumbnail);
 		});
@@ -168,14 +142,9 @@ public class PostService {
 			isFavorite = this.postFavoriteRepository.findByMemberIdAndPostId(memberId, postId).isPresent();
 		}
 
-		List<PostImageResBody> images = post.getImages()
-			.stream()
-			.map(img -> PostImageResBody.of(img, s3.generatePresignedUrl(img.getImageUrl())))
-			.toList();
+		List<PostImageResBody> images = postImageService.toImageResBodies(post.getImages());
 
-		String authorProfileUrl =
-			post.getAuthor().getProfileImgUrl() != null ? s3.generatePresignedUrl(post.getAuthor().getProfileImgUrl()) :
-				null;
+		String authorProfileUrl = postImageService.toPresignedUrl(post.getAuthor().getProfileImgUrl());
 
 		return PostDetailResBody.of(post, isFavorite, images, authorProfileUrl);
 	}
@@ -184,12 +153,7 @@ public class PostService {
 	public PagePayload<PostListResBody> getMyPosts(Long memberId, Pageable pageable) {
 		Page<PostListResBody> result = this.postQueryRepository.findMyPost(memberId, pageable).map(post -> {
 
-			String thumbnail = post.getImages()
-				.stream()
-				.filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-				.findFirst()
-				.map(img -> s3.generatePresignedUrl(img.getImageUrl()))
-				.orElse(null);
+			String thumbnail = postImageService.toThumbnailUrl(post);
 
 			return PostListResBody.of(post, false, thumbnail);
 		});
@@ -233,12 +197,7 @@ public class PostService {
 
 			Post post = fav.getPost();
 
-			String thumbnail = post.getImages()
-				.stream()
-				.filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-				.findFirst()
-				.map(img -> s3.generatePresignedUrl(img.getImageUrl()))
-				.orElse(null);
+			String thumbnail = postImageService.toThumbnailUrl(post);
 
 			return PostListResBody.of(post, true, thumbnail);
 		});
@@ -279,51 +238,12 @@ public class PostService {
 
 		post.resetPostOptions(newOptions);
 
-		post.resetPostImages(processPostImage(post, reqBody, images));
+		List<PostImage> newImages = postImageService.updateImages(post, images, reqBody.images());
+		post.resetPostImages(newImages);
 
 		postVectorService.deletePost(postId);
 
 		post.updateEmbeddingStatusWait();
-	}
-
-	private List<PostImage> processPostImage(Post post, PostUpdateReqBody reqBody, List<MultipartFile> images) {
-		List<Long> keepImageIds = reqBody.images().stream().map(PostImageReqBody::id).filter(Objects::nonNull).toList();
-
-		post.getImages()
-			.stream()
-			.filter(img -> !keepImageIds.contains(img.getId()))
-			.forEach(img -> s3.delete(img.getImageUrl()));
-
-		List<PostImage> result = new ArrayList<>();
-		int fileIndex = 0;
-
-		for (PostImageReqBody imageReq : reqBody.images()) {
-			if (imageReq.id() != null) {
-
-				PostImage existingImage = post.getImages()
-					.stream()
-					.filter(img -> img.getId().equals(imageReq.id()))
-					.findFirst()
-					.orElseThrow(() -> new ServiceException(HttpStatus.NOT_FOUND, "존재하지 않는 이미지입니다: " + imageReq.id()));
-
-				result.add(new PostImage(post, existingImage.getImageUrl(), imageReq.isPrimary()));
-
-			} else {
-				if (images == null || fileIndex >= images.size()) {
-					throw new ServiceException(HttpStatus.BAD_REQUEST, "이미지 정보와 파일 개수가 일치하지 않습니다.");
-				}
-
-				String uploadedUrl = s3.upload(images.get(fileIndex));
-				result.add(new PostImage(post, uploadedUrl, imageReq.isPrimary()));
-				fileIndex++;
-			}
-		}
-
-		if (result.isEmpty()) {
-			throw new ServiceException(HttpStatus.BAD_REQUEST, "이미지는 최소 1개 이상 등록해야 합니다.");
-		}
-
-		return result;
 	}
 
 	@Transactional
@@ -336,17 +256,9 @@ public class PostService {
 			throw new ServiceException(HttpStatus.FORBIDDEN, "본인의 게시글만 삭제할 수 있습니다.");
 		}
 
-		List<String> imageUrls = post.getImages()
-			.stream()
-			.map(PostImage::getImageUrl)
-			.filter(Objects::nonNull)
-			.toList();
+		postImageService.deleteImages(post);
 
-		for (String imageUrl : imageUrls) {
-			s3.delete(imageUrl);
-		}
-
-		this.postRepository.delete(post);
+		postRepository.delete(post);
 
 		postVectorService.deletePost(postId);
 	}
