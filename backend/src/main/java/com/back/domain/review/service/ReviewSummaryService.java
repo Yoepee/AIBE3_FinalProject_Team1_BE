@@ -5,6 +5,7 @@ import com.back.domain.review.repository.ReviewQueryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public class ReviewSummaryService {
     @Value("${custom.ai.author-review-summary-prompt}")
     private String authorReviewSummaryPrompt;
 
+    @Cacheable(value = "postReviewSummary", key = "#postId")
     public String summarizePostReviews(Long postId) {
         List<Review> reviews = reviewQueryRepository.findTop30ByPostId(postId);
 
@@ -41,6 +43,7 @@ public class ReviewSummaryService {
                          .content();
     }
 
+    @Cacheable(value = "memberReviewSummary", key = "#memberId")
     public String summarizeMemberReviews(Long memberId) {
         List<Review> reviews = reviewQueryRepository.findTop30ByMemberId(memberId);
 
