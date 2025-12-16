@@ -682,34 +682,76 @@ return answerClient.prompt(prompt).call().content();
 <details>
 <summary><strong>📸 AWS Lambda + CloudFront 기반 이미지 리사이징 & 캐싱</strong></summary>
 
-## 도입 배경
+### 기능 개요
 
-게시글 이미지(목록, 상세, 썸네일)와 멤버 프로필 이미지(채팅, 게시글 작성자 정보 등)가 자주 노출되면서 다음과 같은 문제가 발생했습니다.
+게시글 이미지와 멤버 프로필 이미지를 **서버 부하 없이 자동으로 리사이징하고, CloudFront를 통해 캐싱된 상태로 제공**하는 이미지 처리 시스템입니다.
 
-**초기 방식 (원본 이미지 그대로 제공)**
-- 고용량으로 인한 응답 지연
-- 동일 이미지의 반복 요청으로 인한 트래픽 증가
+원본 이미지 업로드 시 AWS Lambda가 자동으로 용도별(썸네일, 상세보기) 이미지를 생성하며, 백엔드는 단순히 CloudFront URL만 반환하는 **책임 분리 구조**로 설계했습니다.
 
-**개선 시도 (Thumbnailator로 서버 리사이징)**
-- 용량은 줄었으나, 서버에서 리사이징을 처리해 업로드하는 구조
-- 사진 5장 정도만 되어도 리사이징 작업으로 응답 속도가 급격히 저하
+---
 
-이에 따라 **이미지 처리 책임을 서버 외부로 완전히 분리하면서도, 반복 요청 성능을 보장하는 구조**가 필요했습니다.
+### 설계 목표
 
-## 해결 방식 -> 이미지 업로드시 AWS Lambda로 리사이징 및 CloudFront 캐싱
+- **서버 부하 제거**
+  - 이미지 리사이징 작업을 서버에서 Lambda로 완전히 분리
+  - 메인 서버는 업로드/저장 처리만 담당
+- **응답 속도 개선**
+  - 고용량 원본 대신 용도에 맞는 리사이즈 이미지 제공
+  - CloudFront 캐싱으로 반복 요청 성능 보장
+- **트래픽 효율화**
+  - WebP 포맷 변환으로 이미지 용량 경량화
+  - CDN 캐싱으로 S3 직접 요청 최소화
+- **확장성 확보**
+  - 이미지 유형(게시글/프로필)에 관계없이 공통 파이프라인으로 처리
+  - 새로운 이미지 크기 추가 시 Lambda 코드만 수정
 
-### 이미지 처리 흐름
+---
 
-1. 사용자가 이미지를 업로드하면 원본 이미지를 S3에 저장하고, **CloudFront URL을 데이터베이스에 저장**합니다.
-2. S3 업로드 이벤트를 트리거로 AWS Lambda가 실행됩니다.
-3. Lambda에서 이미지 유형에 따라 리사이징을 수행합니다.
-   - **프로필 이미지**: 원본 + 썸네일
-   - **게시글 이미지**: 원본 + 썸네일(목록용) + 상세보기 이미지
-4. 리사이징된 이미지들을 각각 S3에 저장합니다.
-5. 클라이언트는 CloudFront를 통해 용도에 맞는 이미지를 캐싱된 상태로 전달받습니다.
+### 처리 흐름
+```text
+사용자 이미지 업로드
+    ↓
+원본 이미지를 S3에 저장
+    ↓
+CloudFront URL을 DB에 저장
+    ↓
+S3 업로드 이벤트 발생
+    ↓
+AWS Lambda 자동 실행
+    ↓
+이미지 유형별 리사이징 수행
+  - 프로필: 원본 + 썸네일
+  - 게시글: 원본 + 썸네일 + 상세보기
+    ↓
+리사이징된 이미지들을 S3에 저장
+(WebP 포맷, 1년 캐싱 설정)
+    ↓
+클라이언트 요청 시
+CloudFront에서 캐싱된 이미지 제공
+```
 
-### AWS Lambda 리사이징 
+---
 
+### 단계별 핵심 로직
+
+#### 1. 원본 이미지 업로드 및 URL 저장
+```java
+// 원본 이미지를 S3에 업로드
+String originalKey = "posts/images/originals/" + uuid + ".jpg";
+s3Client.putObject(originalKey, imageFile);
+
+// CloudFront URL을 DB에 저장
+String cloudfrontUrl = "https://" + cloudfrontDomain + "/" + originalKey;
+postImageRepository.save(new PostImage(cloudfrontUrl));
+```
+
+- 원본 이미지를 S3 `originals` 디렉토리에 저장
+- CloudFront 도메인을 포함한 URL을 데이터베이스에 저장
+- S3 업로드 이벤트가 자동으로 Lambda를 트리거
+
+---
+
+#### 2. AWS Lambda 자동 리사이징
 ```javascript
 const SIZES = {
     thumbnail: { width: 800, height: 600 },
@@ -733,30 +775,80 @@ for (const [sizeName, dimensions] of Object.entries(SIZES)) {
         Bucket: bucket,
         Key: destinationKey,
         Body: resizedImage,
-        ContentType: "image/webp", //webp로 설정해 용량 경량화
+        ContentType: "image/webp",
         CacheControl: "max-age=31536000"  // 1년 캐싱
     }));
 }
 ```
 
-### s3 디렉토리 분기
+- S3 업로드 이벤트를 트리거로 Lambda 자동 실행
+- **Sharp 라이브러리**로 이미지 리사이징
+- **WebP 포맷**으로 변환하여 용량 경량화 (quality: 85)
+- 용도별 크기로 리사이징 후 `resized/{sizeType}` 디렉토리에 저장
+- **1년 캐싱 설정**으로 CloudFront 캐싱 최적화
 
+---
+
+#### 3. S3 디렉토리 구조 및 URL 생성
 ```java
 // 원본: posts/images/originals/uuid.jpg
 // 리사이즈: posts/images/resized/{sizeType}/uuid.webp
+
 String resizedKey = "posts/images/resized/" + sizeType + "/" + nameWithoutExt + ".webp";
 return "https://" + cloudfrontDomain + "/" + resizedKey;
 ```
-원본 업로드 시 Lambda가 자동으로 각 용도별 이미지를 생성하고, 백엔드에서는 단순히 경로 문자열만 조합하여 반환하는 **책임 분리** 구조로 설계했습니다.
 
+- **디렉토리 분리**로 원본과 리사이즈 이미지 구분
+  - `originals/`: 원본 이미지 저장
+  - `resized/thumbnail/`: 목록용 썸네일
+  - `resized/detail/`: 상세보기용 이미지
+- 백엔드는 단순히 **경로 문자열만 조합**하여 CloudFront URL 반환
+- 실제 리사이징 작업은 Lambda에서 비동기 처리
 
-## 적용 효과
+---
 
-이미지 리사이징을 AWS Lambda에서 처리하도록 구조를 변경하여, 메인 서버는 단순 업로드/저장 처리만 수행하도록 했습니다. 덕분에 게시글 이미지, 채팅, 멤버 프로필 등 반복 요청이 많은 화면에서도 CloudFront 캐싱과 결합해 빠른 이미지 로딩과 안정적인 응답을 제공할 수 있었습니다.
+#### 4. CloudFront 캐싱 및 이미지 제공
+```javascript
+CacheControl: "max-age=31536000"  // 1년 캐싱
+```
 
-> - 응답 속도 개선: 5장 기준 이미지 업로드 시 기존 1~2초에서 약 600ms로 단축
-> - 트래픽 효율성 강화: 리사이징된 이미지를 캐싱하여 사용자 트래픽 감소
-> - 유지보수성과 확장성 확보: 이미지 유형에 관계없이 공통 파이프라인으로 처리
+- CloudFront가 리사이징된 이미지를 캐싱하여 제공
+- 동일 이미지 반복 요청 시 S3까지 가지 않고 CloudFront에서 즉시 응답
+- 게시글 목록, 채팅, 프로필 등 반복 노출이 잦은 화면에서 성능 향상
+
+---
+
+### 핵심 설계 포인트
+
+**초기 방식 (원본 이미지 그대로 제공)**
+- 고용량 이미지로 인한 응답 지연
+- 동일 이미지의 반복 요청으로 트래픽 증가
+
+**개선 시도 (Thumbnailator로 서버 리사이징)**
+- 이미지 5장 정도만 되어도 리사이징 작업으로 응답 속도 급격히 저하
+- 서버가 이미지 처리 부담을 직접 감당
+
+**최종 방식(Lambda로 리사이징 책임 분리 + CloudFront 캐싱)**
+
+1. **이미지 처리 책임 분리**
+   - 서버: 원본 업로드/저장만 담당
+   - Lambda: 리사이징 자동 처리 (비동기)
+   - CloudFront: 캐싱 및 배포
+
+2. **용도별 이미지 자동 생성**
+   - 프로필 이미지: 원본 + 썸네일
+   - 게시글 이미지: 원본 + 썸네일(목록용) + 상세보기
+
+3. **WebP 변환 및 캐싱 최적화**
+   - JPEG/PNG → WebP 변환으로 용량 50~70% 절감
+   - 1년 캐싱 설정으로 반복 요청 성능 극대화
+
+---
+
+### 적용 효과
+
+이미지 5장 기준 업로드 처리 시간은 **1~2초 → 약 600ms**로 단축되었으며,  
+리사이징 이미지와 원본을 함께 저장함으로써 저장 공간은 증가했지만, 사용자 트래픽 측면에서는 더 효율적인 전송 구조를 확보했습니다.
 
 </details>
 
