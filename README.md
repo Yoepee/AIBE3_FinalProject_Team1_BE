@@ -67,7 +67,7 @@
 
 # 🧩 아키텍처
 <div align="center">
-<img width="720" height="347" alt="image" src="https://github.com/user-attachments/assets/fa9ea756-b7c3-4f40-b0f0-812108882554" />
+<img width="720" height="347" alt="image" src="images/서비스%20아키텍처.png" />
 </div>
 
 ### 주요 아키텍처 특징
@@ -89,6 +89,26 @@
 <br>
 
 # 🚀 기능 소개
+
+<!-- 회원 -->
+<details>
+<summary>👤 회원</summary>
+
+### 회원 가입
+![회원가입](images/회원/회원가입.png)
+
+- 이메일, 비밀번호, 닉네임을 입력받아 회원 가입
+- 이메일(SMTP) 인증을 통해 본인 확인
+- 중복된 이메일, 닉네임 가입 방지
+
+### 로그인
+![로그인](images/회원/로그인.png)
+
+- 이메일과 비밀번호를 통한 로그인
+- 카카오 OAuth2 로그인 연동
+- JWT 기반 인증 토큰 발급
+
+</details>
 
 <!-- 게시글 -->
 <details>
